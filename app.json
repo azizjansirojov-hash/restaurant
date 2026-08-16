@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Lale",
+    "slug": "lale",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#E8E0D5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lale.restaurant"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E8E0D5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.lale.restaurant",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.lale",
+          "enableGooglePay": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#9B2D35"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      },
+      "supabaseUrl": "",
+      "supabaseAnonKey": "",
+      "stripePublishableKey": "",
+      "appEnv": "development"
+    }
+  }
+}
