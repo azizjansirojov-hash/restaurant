@@ -591,3 +591,62 @@ npx expo export --platform web → Web Bundled 915ms (1338 modules)
 2. **Run `npm run test:credential-backed`** with guest/staff/owner JWTs — especially **Step 1.8b live RPC tamper** (release-blocking if it fails).
 3. **Configure Stripe test mode** — complete Steps 2.5 and 4.4 on a native device.
 4. **Monitor `image-size@2.0.3`** on npm — upgrade when published to clear the 14 high build-tool advisories (currently accepted low real-world risk).
+
+## GitHub Publication (2026-08-17)
+
+**Status:** 🟡 Partial — local commit ready; push deferred by user (commit-only). Target: **private** repo at `https://github.com/azizjansirojov-hash/restaurant.git`.
+
+### Step 1 — Secret audit
+
+**Result: No secrets found in tracked files or git history.**
+
+| Check | Outcome |
+|-------|---------|
+| `.gitignore` excludes `.env`, `.env.*.local`, `node_modules`, `.expo/`, `dist/`, `.e2e-web-export/`, `debug-*.log`, `audit-before.json`, `.claude/` | **Confirmed** (`git check-ignore` verified) |
+| `git status` before commit | No `.env` file present; `debug-01d79a.log`, `audit-before.json`, `.claude/` ignored |
+| Grep for `sk_live`, `sk_test_*`, `pk_live`, `service_role` JWTs, hardcoded Bearer tokens | **No matches** in source |
+| `.env.example` | Placeholders only (`your-project.supabase.co`, `your-anon-key`, `pk_test_...`, empty server keys) |
+| Git history | Only prior commit `e92dc10` contained `README.md` (1 line) — no env files ever committed |
+| `git ls-files` post-commit | **No** `.env`, `debug-*.log`, or `audit-before.json` tracked |
+
+**Grep hits (false positives / env var names only, not values):**
+- `supabase/functions/*.ts` — `Deno.env.get('STRIPE_SECRET_KEY')` etc. (reads from environment)
+- `scripts/seed-supabase.ts` — documents `SUPABASE_SERVICE_ROLE_KEY` env var name
+- `.env.example` — placeholder URLs/keys only
+
+**Credential rotation required:** None.
+
+### Step 2 — Repository hygiene
+
+| Item | Status |
+|------|--------|
+| `package-lock.json` tracked | Yes |
+| `node_modules/`, `.e2e-web-export/` excluded | Yes |
+| Large binaries in commit | App icons/png only (< 1MB each); no exported bundles |
+| LICENSE | MIT, Copyright 2026 Lale App contributors |
+
+### Step 3 — README
+
+Updated `README.md` with stack, setup, env var sourcing, migrations, seed, test commands, security notes, links to `PROGRESS_LOG.md` and `EMERGENT_MASTER_PROMPT.md`.
+
+### Step 4 — Git
+
+| Item | Value |
+|------|-------|
+| Commit | `6db4bd1` — `chore: initial commit — Lale app with Supabase backend, Stripe payments, and QA harness` |
+| Files | 99 files, 20,123 insertions |
+| Remote | `origin` → `https://github.com/azizjansirojov-hash/restaurant.git` |
+| Visibility | **Private** (user confirmed) |
+| Push | **Deferred** — user will push manually |
+| Branch | `main` (1 commit ahead of `origin/main`) |
+
+**To push when ready:**
+```bash
+git push -u origin main
+```
+
+**Post-push verification (run locally after push):**
+```bash
+git ls-tree -r origin/main --name-only | findstr /i "\.env debug audit-before"
+# Expected: no output (only .env.example should exist)
+```
