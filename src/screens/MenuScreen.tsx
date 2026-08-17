@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import type { GuestStackParamList } from '../navigation/types';
 import { useAppCategories, useAppMenuItems } from '../hooks/useAppData';
 import { colors, minTap, spacing } from '../theme/tokens';
-import { formatCents } from '../utils/money';
+import { formatSom } from '../utils/money';
 
 export function MenuScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<GuestStackParamList>>();
   const { data: categories = [] } = useAppCategories();
   const { data: menuItems = [] } = useAppMenuItems();
@@ -58,7 +60,7 @@ export function MenuScreen() {
         keyExtractor={(i) => i.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>Nothing on this menu yet.</Text>
+          <Text style={styles.empty}>{t('menu.empty')}</Text>
         }
         renderItem={({ item }) => (
           <Pressable
@@ -74,10 +76,10 @@ export function MenuScreen() {
             <View style={styles.meta}>
               <View style={styles.nameRow}>
                 <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.price}>{formatCents(item.priceCents)}</Text>
+                <Text style={styles.price}>{formatSom(item.priceSom)}</Text>
               </View>
               <Text style={styles.desc} numberOfLines={2}>
-                {item.isAvailable ? item.description : 'Sold out for now'}
+                {item.isAvailable ? item.description : t('menu.soldOut')}
               </Text>
             </View>
           </Pressable>

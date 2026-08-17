@@ -1,13 +1,35 @@
 import type { DayHours, Reservation, RestaurantSettings } from '../types';
+import { formatTime } from './format';
 
 function parseHm(hm: string): { h: number; m: number } {
   const [h, m] = hm.split(':').map(Number);
   return { h, m };
 }
 
-export function isPeakSlot(slotStart: Date): boolean {
-  const day = slotStart.getDay(); // 5=Fri, 6=Sat
-  const hour = slotStart.getHours();
+function localParts(d: Date, timezone?: string): { day: number; hour: number } {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    weekday: 'short',
+    hour: 'numeric',
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(d);
+  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? '';
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
+  const dayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  return { day: dayMap[weekday] ?? d.getDay(), hour };
+}
+
+export function isPeakSlot(slotStart: Date, timezone?: string): boolean {
+  const { day, hour } = localParts(slotStart, timezone);
   const isFriSat = day === 5 || day === 6;
   return isFriSat && hour >= 17 && hour < 21;
 }
@@ -56,6 +78,6 @@ export function generateSlots(
   return slots;
 }
 
-export function formatSlotLabel(d: Date): string {
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+export function formatSlotLabel(d: Date, timezone?: string): string {
+  return formatTime(d, timezone);
 }

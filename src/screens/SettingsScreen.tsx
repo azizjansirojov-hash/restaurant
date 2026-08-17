@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
 import { useAppSettings } from '../hooks/useAppData';
@@ -9,9 +10,8 @@ import { useAuth } from '../providers/AuthProvider';
 import type { DayHours } from '../types';
 import { colors, spacing } from '../theme/tokens';
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 export function SettingsScreen() {
+  const { t } = useTranslation();
   const { data: settings } = useAppSettings();
   const { updateSettings } = useOwnerActions();
   const { logout } = useAuth();
@@ -28,7 +28,7 @@ export function SettingsScreen() {
   useEffect(() => {
     if (!settings) return;
     setEta(String(settings.pickupEtaMinutes));
-    setDeposit(String(settings.peakDepositCents / 100));
+    setDeposit(String(settings.peakDepositSom));
     setTaxRate(String(settings.taxRatePercent));
     setDefaultTip(String(settings.defaultTipPercent));
     setTipPresets(settings.tipPresets.join(', '));
@@ -43,18 +43,18 @@ export function SettingsScreen() {
       const presets = tipPresets
         .split(',')
         .map((s) => Number(s.trim()))
-        .filter((n) => Number.isFinite(n) && n > 0);
+        .filter((n) => Number.isFinite(n) && n >= 0);
 
       await updateSettings({
         pickupEtaMinutes: Number(eta) || settings.pickupEtaMinutes,
-        peakDepositCents: Math.round((Number(deposit) || 25) * 100),
+        peakDepositSom: Math.round(Number(deposit) || settings.peakDepositSom),
         taxRatePercent: Number(taxRate) || settings.taxRatePercent,
         defaultTipPercent: Number(defaultTip) || settings.defaultTipPercent,
         tipPresets: presets.length >= 3 ? presets : settings.tipPresets,
         hours: hoursDraft,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save settings.');
+      setError(e instanceof Error ? e.message : t('errors.saveSettingsFailed'));
     } finally {
       setSaving(false);
     }
@@ -77,10 +77,10 @@ export function SettingsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.eyebrow}>Owner</Text>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.eyebrow}>{t('settings.eyebrow')}</Text>
+        <Text style={styles.title}>{t('settings.title')}</Text>
 
-        <Row label="Delivery enabled">
+        <Row label={t('settings.deliveryEnabled')}>
           <Switch
             value={settings.deliveryEnabled}
             onValueChange={(v) => updateSettings({ deliveryEnabled: v })}
@@ -88,7 +88,7 @@ export function SettingsScreen() {
             thumbColor={colors.cream}
           />
         </Row>
-        <Row label="Peak deposit (Fri–Sat 5–9pm)">
+        <Row label={t('settings.peakDepositEnabled')}>
           <Switch
             value={settings.peakDepositEnabled}
             onValueChange={(v) => updateSettings({ peakDepositEnabled: v })}
@@ -97,21 +97,41 @@ export function SettingsScreen() {
           />
         </Row>
 
-        <TextField label="Pickup ETA (minutes)" keyboardType="number-pad" value={eta} onChangeText={setEta} />
-        <TextField label="Peak deposit ($)" keyboardType="decimal-pad" value={deposit} onChangeText={setDeposit} />
-        <TextField label="Tax rate (%)" keyboardType="decimal-pad" value={taxRate} onChangeText={setTaxRate} />
-        <TextField label="Default tip (%)" keyboardType="number-pad" value={defaultTip} onChangeText={setDefaultTip} />
         <TextField
-          label="Tip presets (comma-separated %)"
-          placeholder="15, 18, 20"
+          label={t('settings.pickupEta')}
+          keyboardType="number-pad"
+          value={eta}
+          onChangeText={setEta}
+        />
+        <TextField
+          label={t('settings.peakDepositSom')}
+          keyboardType="number-pad"
+          value={deposit}
+          onChangeText={setDeposit}
+        />
+        <TextField
+          label={t('settings.taxRate')}
+          keyboardType="decimal-pad"
+          value={taxRate}
+          onChangeText={setTaxRate}
+        />
+        <TextField
+          label={t('settings.defaultTip')}
+          keyboardType="number-pad"
+          value={defaultTip}
+          onChangeText={setDefaultTip}
+        />
+        <TextField
+          label={t('settings.tipPresets')}
+          placeholder={t('settings.tipPresetsPlaceholder')}
           value={tipPresets}
           onChangeText={setTipPresets}
         />
 
-        <Text style={styles.section}>Hours</Text>
+        <Text style={styles.section}>{t('settings.hours')}</Text>
         {hoursDraft.map((h) => (
           <View key={h.day} style={styles.hourRow}>
-            <Text style={styles.dayLabel}>{DAY_LABELS[h.day]}</Text>
+            <Text style={styles.dayLabel}>{t(`settings.days.${h.day}`)}</Text>
             <Switch
               value={!h.closed}
               onValueChange={() => toggleDayClosed(h.day)}
@@ -121,13 +141,13 @@ export function SettingsScreen() {
             {!h.closed && (
               <View style={styles.hourFields}>
                 <TextField
-                  label="Open"
+                  label={t('settings.open')}
                   value={h.open}
                   onChangeText={(v) => updateHourField(h.day, 'open', v)}
                   style={{ flex: 1 }}
                 />
                 <TextField
-                  label="Close"
+                  label={t('settings.close')}
                   value={h.close}
                   onChangeText={(v) => updateHourField(h.day, 'close', v)}
                   style={{ flex: 1 }}
@@ -139,8 +159,13 @@ export function SettingsScreen() {
 
         <Text style={styles.meta}>{settings.address}</Text>
         {!!error && <Text style={styles.error}>{error}</Text>}
-        <Button label={saving ? 'Saving…' : 'Save'} onPress={save} loading={saving} style={{ marginTop: 20 }} />
-        <Button label="Sign out" variant="ghost" onPress={logout} style={{ marginTop: 14 }} />
+        <Button
+          label={saving ? t('settings.saving') : t('common.save')}
+          onPress={save}
+          loading={saving}
+          style={{ marginTop: 20 }}
+        />
+        <Button label={t('common.signOut')} variant="ghost" onPress={logout} style={{ marginTop: 14 }} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -78,11 +78,11 @@ interface AppState {
   setLoyaltyBlocks: (blocks: number) => void;
   clearLoyaltyRedeem: () => void;
 
-  cartSubtotalCents: () => number;
-  discountCents: () => number;
-  taxCents: () => number;
-  tipCents: () => number;
-  totalCents: () => number;
+  cartSubtotalSom: () => number;
+  discountSom: () => number;
+  taxSom: () => number;
+  tipSom: () => number;
+  totalSom: () => number;
 
   placeOrder: () => { ok: boolean; orderId?: string; error?: string };
   bumpOrderStatus: (orderId: string) => { ok: boolean; error?: string };
@@ -107,9 +107,9 @@ interface AppState {
 
   dayAnalytics: (day?: Date) => {
     ordersCount: number;
-    gmvCents: number;
-    aovCents: number;
-    tipTotalCents: number;
+    gmvSom: number;
+    aovSom: number;
+    tipTotalSom: number;
     upsellAttachRate: number;
     noShowRate: number;
     loyaltyEarned: number;
@@ -227,13 +227,13 @@ export const useAppStore = create<AppState>()(
 
       addToCart: (item, qty, mods, isUpsell) => {
         const unit =
-          item.priceCents + mods.reduce((s, m) => s + m.priceCents, 0);
+          item.priceSom + mods.reduce((s, m) => s + m.priceSom, 0);
         const key = createId('cart');
         const entry: CartItem = {
           key,
           menuItemId: item.id,
           name: item.name,
-          unitPriceCents: unit,
+          unitPriceSom: unit,
           quantity: qty,
           selectedModifiers: mods,
           imageUrl: item.imageUrl,
@@ -338,11 +338,11 @@ export const useAppStore = create<AppState>()(
           discountMode: get().appliedPromoId ? 'promo' : 'none',
         }),
 
-      cartSubtotalCents: () =>
-        get().cart.reduce((s, c) => s + c.unitPriceCents * c.quantity, 0),
+      cartSubtotalSom: () =>
+        get().cart.reduce((s, c) => s + c.unitPriceSom * c.quantity, 0),
 
-      discountCents: () => {
-        const sub = get().cartSubtotalCents();
+      discountSom: () => {
+        const sub = get().cartSubtotalSom();
         const { discountMode, appliedPromoId, loyaltyBlocksToRedeem, settings, promos } = get();
         if (discountMode === 'promo' && appliedPromoId) {
           const promo = promos.find((p) => p.id === appliedPromoId);
@@ -355,26 +355,26 @@ export const useAppStore = create<AppState>()(
         if (discountMode === 'loyalty' && loyaltyBlocksToRedeem > 0) {
           return Math.min(
             sub,
-            loyaltyBlocksToRedeem * settings.loyaltyRedeemValueCents
+            loyaltyBlocksToRedeem * settings.loyaltyRedeemValueSom
           );
         }
         return 0;
       },
 
-      taxCents: () => {
-        const after = Math.max(0, get().cartSubtotalCents() - get().discountCents());
+      taxSom: () => {
+        const after = Math.max(0, get().cartSubtotalSom() - get().discountSom());
         return calcTax(after, get().settings.taxRatePercent);
       },
 
-      tipCents: () => {
-        const after = Math.max(0, get().cartSubtotalCents() - get().discountCents());
+      tipSom: () => {
+        const after = Math.max(0, get().cartSubtotalSom() - get().discountSom());
         return calcTip(after, get().tipPercent);
       },
 
-      totalCents: () =>
-        Math.max(0, get().cartSubtotalCents() - get().discountCents()) +
-        get().taxCents() +
-        get().tipCents(),
+      totalSom: () =>
+        Math.max(0, get().cartSubtotalSom() - get().discountSom()) +
+        get().taxSom() +
+        get().tipSom(),
 
       placeOrder: () => {
         const user = get().currentUser;
@@ -396,11 +396,11 @@ export const useAppStore = create<AppState>()(
           }
         }
 
-        const subtotal = get().cartSubtotalCents();
-        const discount = get().discountCents();
-        const tax = get().taxCents();
-        const tip = get().tipCents();
-        const total = get().totalCents();
+        const subtotal = get().cartSubtotalSom();
+        const discount = get().discountSom();
+        const tax = get().taxSom();
+        const tip = get().tipSom();
+        const total = get().totalSom();
         const settings = get().settings;
         const blocks = get().loyaltyBlocksToRedeem;
         const pointsToRedeem = blocks * settings.loyaltyRedeemBlock;
@@ -415,7 +415,7 @@ export const useAppStore = create<AppState>()(
           orderId,
           menuItemId: c.menuItemId,
           nameSnapshot: c.name,
-          unitPriceCents: c.unitPriceCents,
+          unitPriceSom: c.unitPriceSom,
           modifiersSnapshot: c.selectedModifiers,
           quantity: c.quantity,
         }));
@@ -425,11 +425,11 @@ export const useAppStore = create<AppState>()(
           userId: user.id,
           status: 'received',
           fulfillmentType: get().fulfillmentType,
-          subtotalCents: subtotal,
-          taxCents: tax,
-          tipCents: tip,
-          discountCents: discount,
-          totalCents: total,
+          subtotalSom: subtotal,
+          taxSom: tax,
+          tipSom: tip,
+          discountSom: discount,
+          totalSom: total,
           promoCodeId: get().discountMode === 'promo' ? get().appliedPromoId : undefined,
           loyaltyRedeemedPoints: pointsToRedeem > 0 ? pointsToRedeem : undefined,
           paymentIntentId: createId('pi'),
@@ -510,7 +510,7 @@ export const useAppStore = create<AppState>()(
 
         if (next === 'completed') {
           patch.completedAt = now;
-          const points = earnPoints(order.subtotalCents, order.discountCents, get().settings);
+          const points = earnPoints(order.subtotalSom, order.discountSom, get().settings);
           if (points > 0) {
             ledger = [
               ...ledger,
@@ -624,7 +624,7 @@ export const useAppStore = create<AppState>()(
           partySize,
           slotStart: slotStart.toISOString(),
           status: 'booked',
-          depositHoldCents: needsDeposit ? settings.peakDepositCents : undefined,
+          depositHoldSom: needsDeposit ? settings.peakDepositSom : undefined,
           depositForfeited: false,
           createdAt: new Date().toISOString(),
         };
@@ -642,7 +642,7 @@ export const useAppStore = create<AppState>()(
         if (!res) return { ok: false, error: 'Reservation not found.' };
 
         let depositForfeited = res.depositForfeited;
-        if (status === 'no_show' && res.depositHoldCents) {
+        if (status === 'no_show' && res.depositHoldSom) {
           depositForfeited = true;
         }
         if (status === 'seated' || status === 'cancelled') {
@@ -676,7 +676,7 @@ export const useAppStore = create<AppState>()(
               ? {
                   ...r,
                   status: 'cancelled',
-                  depositForfeited: hoursUntil < 2 && !!r.depositHoldCents ? true : false,
+                  depositForfeited: hoursUntil < 2 && !!r.depositHoldSom ? true : false,
                 }
               : r
           ),
@@ -752,8 +752,8 @@ export const useAppStore = create<AppState>()(
           return t >= start.getTime() && t <= end.getTime() && o.status !== 'cancelled';
         });
         const completed = dayOrders.filter((o) => o.status === 'completed' || o.status === 'ready' || o.status === 'preparing' || o.status === 'received');
-        const gmv = completed.reduce((s, o) => s + o.totalCents, 0);
-        const tips = completed.reduce((s, o) => s + o.tipCents, 0);
+        const gmv = completed.reduce((s, o) => s + o.totalSom, 0);
+        const tips = completed.reduce((s, o) => s + o.tipSom, 0);
         const withUpsell = completed.filter((o) =>
           o.items.some((it) => {
             const menu = get().menuItems.find((m) => m.id === it.menuItemId);
@@ -786,9 +786,9 @@ export const useAppStore = create<AppState>()(
 
         return {
           ordersCount: completed.length,
-          gmvCents: gmv,
-          aovCents: completed.length ? Math.round(gmv / completed.length) : 0,
-          tipTotalCents: tips,
+          gmvSom: gmv,
+          aovSom: completed.length ? Math.round(gmv / completed.length) : 0,
+          tipTotalSom: tips,
           upsellAttachRate: completed.length ? withUpsell / completed.length : 0,
           noShowRate: closedRes.length ? noShows / closedRes.length : dayRes.length ? noShows / dayRes.length : 0,
           loyaltyEarned: dayLedger.filter((l) => l.reason === 'earn').reduce((s, l) => s + l.deltaPoints, 0),

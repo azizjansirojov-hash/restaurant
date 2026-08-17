@@ -128,12 +128,12 @@ export const simulatorActions = {
     mods: SelectedModifier[],
     isUpsell?: boolean
   ): SimulatorState {
-    const unit = item.priceCents + mods.reduce((s, m) => s + m.priceCents, 0);
+    const unit = item.priceSom + mods.reduce((s, m) => s + m.priceSom, 0);
     const entry: CartItem = {
       key: createId('cart'),
       menuItemId: item.id,
       name: item.name,
-      unitPriceCents: unit,
+      unitPriceSom: unit,
       quantity: qty,
       selectedModifiers: mods,
       imageUrl: item.imageUrl,
@@ -146,9 +146,9 @@ export const simulatorActions = {
     return { ...state, upsellShownForCheckout: true };
   },
 
-  applyPromo(state: SimulatorState, code: string): { ok: boolean; error?: string; state: SimulatorState } {
+  applyPromo(state: SimulatorState, code: string): { ok: boolean; errorCode?: string; state: SimulatorState } {
     const res = applyPromoCode(code, state.promos);
-    if (!res.ok) return { ok: false, error: res.error, state };
+    if (!res.ok) return { ok: false, errorCode: res.errorCode, state };
     const promo = state.promos.find((p) => p.id === res.promoId)!;
     return {
       ok: true,
@@ -172,7 +172,7 @@ export const simulatorActions = {
     };
   },
 
-  placeOrder(state: SimulatorState): { ok: boolean; error?: string; orderId?: string; state: SimulatorState } {
+  placeOrder(state: SimulatorState): { ok: boolean; errorCode?: string; orderId?: string; state: SimulatorState } {
     const result = placeOrderDomain(
       checkoutInput(state),
       {
@@ -185,7 +185,7 @@ export const simulatorActions = {
       'pi_test_simulated',
       new Date().toISOString()
     );
-    if (!result.ok || !result.order) return { ok: false, error: result.error, state };
+    if (!result.ok || !result.order) return { ok: false, errorCode: result.errorCode, state };
     const patch = result.statePatch!;
     return {
       ok: true,

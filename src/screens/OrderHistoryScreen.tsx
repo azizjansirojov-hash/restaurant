@@ -3,14 +3,18 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import type { GuestStackParamList } from '../navigation/types';
-import { useAppOrders, useCurrentUser } from '../hooks/useAppData';
+import { useAppOrders, useAppSettings, useCurrentUser } from '../hooks/useAppData';
 import { colors, spacing } from '../theme/tokens';
-import { formatCents } from '../utils/money';
+import { formatDateTime } from '../utils/format';
+import { formatSom } from '../utils/money';
 
 export function OrderHistoryScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<GuestStackParamList>>();
   const user = useCurrentUser();
+  const { data: settings } = useAppSettings();
   const { data: orders = [] } = useAppOrders();
   const mine = useMemo(
     () => orders.filter((o) => o.userId === user?.id),
@@ -19,14 +23,14 @@ export function OrderHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <Text style={styles.eyebrow}>History</Text>
-      <Text style={styles.title}>Orders</Text>
+      <Text style={styles.eyebrow}>{t('order.historyEyebrow')}</Text>
+      <Text style={styles.title}>{t('order.historyTitle')}</Text>
       <FlatList
         data={mine}
         keyExtractor={(o) => o.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>No orders yet. Your first pickup starts on the menu.</Text>
+          <Text style={styles.empty}>{t('order.historyEmpty')}</Text>
         }
         renderItem={({ item }) => (
           <Pressable
@@ -34,12 +38,12 @@ export function OrderHistoryScreen() {
             onPress={() => navigation.navigate('OrderStatus', { orderId: item.id })}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.status}>{item.status}</Text>
+              <Text style={styles.status}>{t(`order.status.${item.status}`)}</Text>
               <Text style={styles.date}>
-                {new Date(item.createdAt).toLocaleString()}
+                {formatDateTime(new Date(item.createdAt), settings?.timezone)}
               </Text>
             </View>
-            <Text style={styles.total}>{formatCents(item.totalCents)}</Text>
+            <Text style={styles.total}>{formatSom(item.totalSom)}</Text>
           </Pressable>
         )}
       />

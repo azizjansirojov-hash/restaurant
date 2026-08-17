@@ -650,3 +650,121 @@ git push -u origin main
 git ls-tree -r origin/main --name-only | findstr /i "\.env debug audit-before"
 # Expected: no output (only .env.example should exist)
 ```
+
+## Uzbekistan Localization (uz/ru) + UZS Currency Migration (2026-08-17)
+
+**Status:** 🟡 Partial — engineering complete; blocked on owner business decisions (see Open Business Questions)
+
+**What was built:**
+- i18n infrastructure: `i18next` + `react-i18next` + `expo-localization` with AsyncStorage persistence; default locale `uz`, fallback `uz` (English retired as primary experience — no `en` locale file added; confirm with owner if English fallback should remain).
+- Locale resource files: `src/i18n/locales/uz.json`, `src/i18n/locales/ru.json` — keys organized by domain (`common`, `nav`, `home`, `menu`, `cart`, `checkout`, `order`, `reservation`, `profile`, `auth`, `kitchen`, `host`, `analytics`, `settings`, `promos`, `menuManager`, `components`, `errors`).
+- Language switcher in Profile screen (`setAppLocale` from `src/i18n/index.ts`).
+- Stable error codes in `src/domain/errorCodes.ts`; domain/RPC English strings mapped client-side via `errors.*` keys (RPCs still return English strings server-side — mapped in `resolveErrorCode()`).
+- Currency migration: all `*Cents` fields renamed to `*Som` (whole UZS units, integer-only); SQL migration `003_uzs_currency_i18n.sql`.
+- UZS formatting: `formatSom()` — space thousands separator, unit after amount (`12 500 so'm` / `12 500 сум` per locale).
+- Phone validation: `src/utils/phone.ts` — +998 XX XXX XX XX format.
+- Timezone: seed/default `Asia/Tashkent`; `isPeakSlot()` and `formatSlotLabel()` respect restaurant timezone.
+- Tip UI: 0% first-class option; default tip 0%; presets `[0, 5, 10]`.
+- Seed prices updated to plausible Tashkent neighborhood restaurant UZS values (placeholder — owner must confirm).
+- Stripe edge functions updated to `currency: 'uzs'` (support unverified — see open questions).
+
+**Key decisions & rationale:**
+- Chose i18next over hand-rolled strings for pluralization, interpolation, and future language additions.
+- Renamed fields (`priceSom` not silent `priceCents` reuse) to prevent future engineers applying USD-cent math.
+- Kept integer-only money architecture; no floats introduced.
+- VAT seeded at 12% (standard Uzbekistan QQS rate) as configurable `taxRatePercent` — not confirmed with owner/tax advisor.
+- Menu item names/descriptions kept as Turkish dish names (brand is Anatolian grill); UI chrome fully localized.
+
+**i18n library:** i18next + react-i18next + expo-localization. Node-safe: `format.ts` and `money.ts` use module-level locale sync (no RN import in QA scripts).
+
+**Screens/components with strings extracted:**
+- Screens (16): HomeScreen, MenuScreen, ItemDetailScreen, CartScreen, CheckoutScreen, OrderStatusScreen, OrderHistoryScreen, ReserveScreen, ProfileScreen, OTPScreen, KitchenScreen, HostScreen, AnalyticsScreen, MenuManagerScreen, PromosScreen, SettingsScreen
+- Components (4): UpsellSheet, LoyaltyRing, OrderStatusStepper, QuantityStepper
+- Navigation: RootNavigator (tab/screen titles, header links)
+
+**Final grep for remaining hardcoded JSX literals (2026-08-17):**
+```
+rg '>[A-Za-z]|label="[A-Z]|title="[A-Z]' src/screens src/components → No matches
+rg '"[A-Z][a-z].*"' src/screens → No matches
+```
+Menu seed content (dish names/descriptions) and dev notification strings in domain layer remain English — intentional (content vs chrome).
+
+**Cyrillic font verification:**
+- **DM Sans** (`@expo-google-fonts/dm-sans`): includes Cyrillic extended — renders Russian/Uzbek Cyrillic correctly.
+- **Fraunces** (`@expo-google-fonts/fraunces`): **Latin only — no Cyrillic coverage.** Russian/Uzbek titles using Fraunces will fall back to system serif, breaking brand consistency.
+- **Proposed alternatives (awaiting owner confirmation before swap):**
+  1. **Literata** (Google Fonts) — warm editorial serif, full Latin+Cyrillic
+  2. **PT Serif** — designed for Cyrillic, classic editorial feel
+- No font swap performed pending confirmation.
+
+**Currency field rename summary:**
+
+| Old name | New name | Files touched |
+|----------|----------|---------------|
+| `priceCents` | `priceSom` | types, seed, mappers, stores, domain, screens, scripts, SQL |
+| `unitPriceCents` | `unitPriceSom` | types, cart, orders, mappers, domain, SQL |
+| `subtotalCents` | `subtotalSom` | types, checkout, orders, analytics, SQL |
+| `taxCents` | `taxSom` | types, checkout, orders, SQL |
+| `tipCents` | `tipSom` | types, checkout, orders, analytics, SQL |
+| `discountCents` | `discountSom` | types, checkout, orders, SQL |
+| `totalCents` | `totalSom` | types, checkout, orders, analytics, SQL |
+| `depositHoldCents` | `depositHoldSom` | types, reservations, SQL |
+| `peakDepositCents` | `peakDepositSom` | types, settings, seed, SQL |
+| `loyaltyRedeemValueCents` | `loyaltyRedeemValueSom` | types, settings, loyalty, SQL |
+| `loyaltyEarnPerDollar` | `loyaltyEarnPerSom` | types, settings, loyalty, SQL |
+| `formatCents` | `formatSom` | money.ts, all price-display screens |
+| DB `*_cents` | `*_som` | `003_uzs_currency_i18n.sql`, database.types.ts |
+
+**No-float verification:**
+```
+rg 'parseFloat|toFixed\(2\)' src/utils/money.ts src/domain src/store → no money-related float usage
+Remaining / 100 usages are percent calculations (tax/tip rate), not currency subdivision
+```
+
+---
+
+### Open Business Questions for Owner
+
+1. **VAT/QQS rate:** Seeded **12%** (standard Uzbekistan VAT per Tax Code / bizreg.uz, soliq.uz). Optional 6% simplified regime exists for eligible SMEs from June 2026 — owner must confirm which regime applies and exact rate before launch. **Source:** [bizreg.uz NDS comparison](https://www.bizreg.uz/en/blog/nds-usn-ousn-sravnenie), [RÖDL 2026 reforms](https://www.roedl.com/en/insights/uzbekistan-sme-tax-reforms-2026/).
+
+2. **Tipping:** UI kept as optional tip with 0% default. **Decision needed:** keep tipping, rename to "xizmat haqi" (service charge), or remove from checkout entirely for Uzbekistan market norms.
+
+3. **SMS/OTP provider:** Twilio Verify assumed for U.S./global SMS. **Decision needed:** confirm Twilio delivery reliability to Uzbek carriers (+998), or evaluate local providers (Eskiz.uz, Play Mobile). Do not commit without owner/vendor choice.
+
+4. **Stripe UZS support:** Stripe API lists `uzs` currency, but **Uzbekistan is not a fully supported merchant country** (no local settlement/payouts as of 2026). UZS appears in Money Management as Preview (SWIFT, 6-day). **Decision needed:** verify Stripe account region supports UZS charges/settlement, or evaluate Payme, Click, or other local payment rails. Current code uses `currency: 'uzs'` — may fail at runtime without compatible Stripe account.
+
+5. **Real address, hours, restaurant name:** Seed uses `[PLACEHOLDER — owner to supply real address]`. Display name still "Lale" — confirm if rebranding needed for Uzbekistan market.
+
+6. **English fallback:** Retired as primary; app defaults to `uz`. Confirm whether `en` locale should remain available at all.
+
+7. **Seed menu prices:** All prices are plausible Tashkent placeholders (e.g. Adana 78 000 so'm) — owner must replace with actual menu prices.
+
+8. **Peak reservation deposit culture:** Deposit/no-show flow retained from Brooklyn prompt — confirm if peak-window deposits make sense for Tashkent dining culture or need adjustment.
+
+9. **Brand font for Cyrillic:** Fraunces lacks Cyrillic — confirm Literata or PT Serif swap (see font verification above).
+
+---
+
+**Files changed / added (representative):**
+- Added: `src/i18n/index.ts`, `src/i18n/locales/uz.json`, `src/i18n/locales/ru.json`, `src/domain/errorCodes.ts`, `src/utils/phone.ts`, `src/utils/format.ts`, `supabase/migrations/003_uzs_currency_i18n.sql`
+- Updated: all `src/screens/*`, `src/components/*`, `src/navigation/RootNavigator.tsx`, `src/types/index.ts`, `src/utils/money.ts`, `src/data/seed.ts`, `src/api/mappers.ts`, domain layer, stores, Stripe edge functions, QA scripts, `App.tsx`, `package.json`
+
+**Schema / API changes:**
+- Migration `003_uzs_currency_i18n.sql`: column renames `*_cents` → `*_som`, updated RPCs, UZ settings defaults
+- Stripe: `currency: 'uzs'`, `amountSom` parameter for deposit holds
+
+**Test results:**
+- `npm run typecheck`: Pass
+- `npm run test:qa`: Pass
+- `npm run test:e2e`: Pass (29 pass, 0 fail, 10 not_testable)
+
+**Known issues / follow-ups:**
+- Fraunces Cyrillic gap — pending font decision
+- Stripe UZS may not work without compatible merchant account region
+- RPC error strings still English server-side (client maps to codes)
+- `database.types.ts` and live Supabase must run migration 003 before deploy
+
+**Anything that deviated from the original prompt (and why):**
+- English locale not removed from codebase references but not offered in UI — awaiting owner confirmation on en fallback
+- Did not implement local payment provider (Payme/Click) — flagged as blocking decision per directive
+

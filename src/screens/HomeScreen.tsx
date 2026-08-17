@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { KenBurnsHero } from '../components/KenBurnsHero';
 import { LoyaltyRing } from '../components/LoyaltyRing';
@@ -21,6 +22,7 @@ import { colors, spacing } from '../theme/tokens';
 const { height: SCREEN_H } = Dimensions.get('window');
 
 export function HomeScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<GuestStackParamList>>();
   const user = useCurrentUser();
@@ -37,7 +39,7 @@ export function HomeScreen() {
         ]}
       >
         <Animated.View entering={FadeInDown.duration(700).delay(80)} style={styles.top}>
-          <Text style={styles.mark}>LALE</Text>
+          <Text style={styles.mark}>{t('common.brandMark')}</Text>
         </Animated.View>
 
         <View style={styles.bottom}>
@@ -45,20 +47,20 @@ export function HomeScreen() {
             entering={FadeInUp.duration(700).delay(160)}
             style={styles.brand}
           >
-            Lale
+            {t('common.appName')}
           </Animated.Text>
           <Animated.Text
             entering={FadeInUp.duration(700).delay(240)}
             style={styles.support}
           >
-            Anatolian grill & meze — order direct.
+            {t('home.tagline')}
           </Animated.Text>
           <Animated.View
             entering={FadeInUp.duration(700).delay(320)}
             style={styles.ctaBlock}
           >
             <Button
-              label="Order pickup"
+              label={t('home.orderPickup')}
               onPress={() => navigation.navigate('Menu')}
               variant="cream"
               style={styles.cta}
@@ -69,7 +71,7 @@ export function HomeScreen() {
               accessibilityRole="link"
               style={styles.reserveHit}
             >
-              <Text style={styles.reserve}>Reserve a table</Text>
+              <Text style={styles.reserve}>{t('home.reserveTable')}</Text>
             </Pressable>
           </Animated.View>
         </View>

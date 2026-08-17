@@ -3,20 +3,22 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useStripePayment } from '../hooks/useStripePayment';
 import { Button } from '../components/Button';
 import { Chip } from '../components/Chip';
 import { LoyaltyRing } from '../components/LoyaltyRing';
 import { TextField } from '../components/TextField';
 import {
-  cartSubtotalCents,
-  discountCents,
-  taxCents,
-  tipCents,
-  totalCents,
+  cartSubtotalSom,
+  discountSom,
+  taxSom,
+  tipSom,
+  totalSom,
   validatePlaceOrder,
   type CheckoutInput,
 } from '../domain/checkout';
+import { resolveErrorCode } from '../domain/errorCodes';
 import { simulatorActions } from '../domain/storeSimulator';
 import { useAppPromos, useAppSettings, useCurrentUser } from '../hooks/useAppData';
 import { useOrderActions } from '../hooks/useAppActions';
@@ -27,11 +29,12 @@ import { useCartStore } from '../store/useCartStore';
 import { useLocalServerStore } from '../store/useLocalServerStore';
 import { colors, spacing } from '../theme/tokens';
 import { maxRedeemableBlocks } from '../utils/loyalty';
-import { formatCents } from '../utils/money';
+import { formatSom } from '../utils/money';
 
 type PayState = 'idle' | 'processing' | 'declined' | 'network_error';
 
 export function CheckoutScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<GuestStackParamList>>();
   const user = useCurrentUser();
   const { data: settings } = useAppSettings();
@@ -89,23 +92,31 @@ export function CheckoutScreen() {
     ]
   );
 
-  const subtotal = cartSubtotalCents(cart);
-  const discount = settings ? discountCents(checkoutInput) : 0;
-  const tax = settings ? taxCents(checkoutInput) : 0;
-  const tip = settings ? tipCents(checkoutInput) : 0;
-  const total = settings ? totalCents(checkoutInput) : 0;
+  const subtotal = cartSubtotalSom(cart);
+  const discount = settings ? discountSom(checkoutInput) : 0;
+  const tax = settings ? taxSom(checkoutInput) : 0;
+  const tip = settings ? tipSom(checkoutInput) : 0;
+  const total = settings ? totalSom(checkoutInput) : 0;
+
+  const tipOptions = useMemo(() => {
+    if (!settings) return [0];
+    const presets = settings.tipPresets.filter((p) => p !== 0);
+    return [0, ...presets];
+  }, [settings]);
 
   const [promoDraft, setPromoDraft] = useState('');
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [payState, setPayState] = useState<PayState>('idle');
 
+  const errLabel = (code: string) => t(`errors.${code}`, { defaultValue: t('errors.unknown') });
+
   const maxBlocks = user && settings
     ? maxRedeemableBlocks(
         user.loyaltyBalance,
         settings.loyaltyRedeemBlock,
         subtotal,
-        settings.loyaltyRedeemValueCents
+        settings.loyaltyRedeemValueSom
       )
     : 0;
 
@@ -117,7 +128,7 @@ export function CheckoutScreen() {
     const validation = validatePlaceOrder(checkoutInput);
     if (!validation.ok) {
       setPayState('idle');
-      setError(validation.error || 'Cannot place order.');
+      setError(errLabel(validation.errorCode ?? 'cannotPlaceOrder'));
       return;
     }
 
@@ -125,7 +136,7 @@ export function CheckoutScreen() {
       if (!isLocalFallbackMode()) {
         if (!isStripeConfigured()) {
           setPayState('idle');
-          setError('Stripe is not configured. Add EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY.');
+          setError(t('errors.stripeNotConfigured'));
           return;
         }
 
@@ -149,7 +160,7 @@ export function CheckoutScreen() {
         const { clientSecret, paymentIntentId } = await createPaymentIntent(orderId);
         const { error: initErr } = await initPaymentSheet({
           paymentIntentClientSecret: clientSecret,
-          merchantDisplayName: 'Lale',
+          merchantDisplayName: t('common.appName'),
         });
         if (initErr) {
           setPayState('declined');
@@ -172,7 +183,6 @@ export function CheckoutScreen() {
         return;
       }
 
-      // Local dev only — domain simulator (no Supabase)
       const sim = useLocalServerStore.getState().sim;
       const result = simulatorActions.placeOrder({
         ...sim,
@@ -189,7 +199,7 @@ export function CheckoutScreen() {
       });
       if (!result.ok) {
         setPayState('idle');
-        setError(result.error || 'Payment failed.');
+        setError(result.errorCode ? errLabel(result.errorCode as import('../domain/errorCodes').ErrorCode) : t('errors.paymentFailed'));
         return;
       }
       useLocalServerStore.setState({ sim: result.state });
@@ -199,14 +209,14 @@ export function CheckoutScreen() {
       navigation.replace('OrderStatus', { orderId: result.orderId! });
     } catch (e) {
       setPayState('network_error');
-      setError(e instanceof Error ? e.message : 'Payment failed. Try again.');
+      setError(e instanceof Error ? e.message : t('errors.paymentFailed'));
     }
   };
 
   if (!settings) {
     return (
       <View style={styles.boot}>
-        <Text style={styles.bootText}>Loading checkout…</Text>
+        <Text style={styles.bootText}>{t('checkout.loading')}</Text>
       </View>
     );
   }
@@ -214,45 +224,48 @@ export function CheckoutScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.eyebrow}>Pay direct</Text>
-        <Text style={styles.title}>Checkout</Text>
-        <Text style={styles.tagline}>Order direct — skip the wait</Text>
+        <Text style={styles.eyebrow}>{t('checkout.eyebrow')}</Text>
+        <Text style={styles.title}>{t('checkout.title')}</Text>
+        <Text style={styles.tagline}>{t('checkout.tagline')}</Text>
 
         {payState === 'processing' && (
           <View style={styles.stateBanner}>
-            <Text style={styles.stateTitle}>Processing payment</Text>
-            <Text style={styles.stateBody}>Secure checkout — do not close the app.</Text>
+            <Text style={styles.stateTitle}>{t('checkout.processingTitle')}</Text>
+            <Text style={styles.stateBody}>{t('checkout.processingBody')}</Text>
           </View>
         )}
         {payState === 'declined' && (
           <View style={[styles.stateBanner, styles.stateError]}>
-            <Text style={styles.stateTitle}>Payment declined</Text>
-            <Text style={styles.stateBody}>Check your card or try another method.</Text>
+            <Text style={styles.stateTitle}>{t('checkout.declinedTitle')}</Text>
+            <Text style={styles.stateBody}>{t('checkout.declinedBody')}</Text>
           </View>
         )}
         {payState === 'network_error' && (
           <View style={[styles.stateBanner, styles.stateError]}>
-            <Text style={styles.stateTitle}>Connection issue</Text>
-            <Text style={styles.stateBody}>We could not reach the payment service.</Text>
+            <Text style={styles.stateTitle}>{t('checkout.networkTitle')}</Text>
+            <Text style={styles.stateBody}>{t('checkout.networkBody')}</Text>
           </View>
         )}
 
         {user && (
           <View style={styles.loyalty}>
-            <LoyaltyRing balance={user.loyaltyBalance} block={settings.loyaltyRedeemBlock} />
+            <LoyaltyRing
+              balance={user.loyaltyBalance}
+              block={settings.loyaltyRedeemBlock}
+            />
           </View>
         )}
 
-        <Text style={styles.section}>Fulfillment</Text>
+        <Text style={styles.section}>{t('checkout.fulfillment')}</Text>
         <View style={styles.row}>
           <Chip
-            label={`Pickup · ${settings.pickupEtaMinutes} min`}
+            label={t('checkout.pickupEta', { minutes: settings.pickupEtaMinutes })}
             selected={fulfillmentType === 'pickup'}
             onPress={() => setFulfillmentType('pickup')}
           />
           {settings.deliveryEnabled && (
             <Chip
-              label="Delivery"
+              label={t('checkout.delivery')}
               selected={fulfillmentType === 'delivery'}
               onPress={() => setFulfillmentType('delivery')}
             />
@@ -260,65 +273,69 @@ export function CheckoutScreen() {
         </View>
         {settings.deliveryEnabled && fulfillmentType === 'delivery' && (
           <TextField
-            label="Address"
-            placeholder="Delivery address"
+            label={t('checkout.address')}
+            placeholder={t('checkout.addressPlaceholder')}
             value={deliveryAddress}
             onChangeText={setDeliveryAddress}
           />
         )}
 
-        <Text style={styles.section}>Tip</Text>
+        <Text style={styles.section}>{t('checkout.tip')}</Text>
         <View style={styles.row}>
-          {settings.tipPresets.map((p) => (
+          {tipOptions.map((p) => (
             <Chip
               key={p}
-              label={`${p}%`}
+              label={p === 0 ? t('checkout.tipNone') : t('common.percent', { value: p })}
               selected={tipPercent === p && !customTipPercent}
               onPress={() => setTipPercent(p)}
             />
           ))}
         </View>
         <TextField
-          label="Custom tip %"
-          placeholder="e.g. 22"
+          label={t('checkout.customTip')}
+          placeholder={t('checkout.customTipPlaceholder')}
           keyboardType="decimal-pad"
           value={customTipPercent}
           onChangeText={(v) => setCustomTipPercent(v, settings.defaultTipPercent)}
         />
 
-        <Text style={styles.section}>Promo or loyalty</Text>
-        <Text style={styles.hint}>One promo code or loyalty redeem — not both.</Text>
+        <Text style={styles.section}>{t('checkout.promoOrLoyalty')}</Text>
+        <Text style={styles.hint}>{t('checkout.promoHint')}</Text>
         <View style={[styles.row, { alignItems: 'flex-end' }]}>
           <View style={{ flex: 1 }}>
             <TextField
-              label="Promo"
-              placeholder="CODE"
+              label={t('checkout.promo')}
+              placeholder={t('checkout.promoPlaceholder')}
               autoCapitalize="characters"
               value={promoDraft || promoCodeInput}
               onChangeText={setPromoDraft}
             />
           </View>
           <Button
-            label="Apply"
+            label={t('common.apply')}
             variant="secondary"
             onPress={() => {
               const res = applyPromo(promoDraft || promoCodeInput, promos);
-              setNote(res.ok ? 'Promo applied. Loyalty cleared.' : '');
-              setError(res.ok ? '' : res.error || '');
+              setNote(res.ok ? t('checkout.promoApplied') : '');
+              setError(res.ok ? '' : errLabel(res.errorCode ?? 'invalidPromo'));
             }}
             style={{ marginBottom: 4 }}
           />
         </View>
         {discountMode === 'promo' && (
           <Pressable onPress={clearPromo}>
-            <Text style={styles.clear}>Clear promo</Text>
+            <Text style={styles.clear}>{t('checkout.clearPromo')}</Text>
           </Pressable>
         )}
 
         {maxBlocks > 0 && (
           <View style={{ gap: 10, marginTop: 8 }}>
             <Text style={styles.hint}>
-              {settings.loyaltyRedeemBlock} pts = $10 · up to {maxBlocks}×
+              {t('checkout.loyaltyHint', {
+                block: settings.loyaltyRedeemBlock,
+                value: formatSom(settings.loyaltyRedeemValueSom),
+                max: maxBlocks,
+              })}
             </Text>
             <View style={styles.row}>
               {[1, 2, 3]
@@ -326,11 +343,11 @@ export function CheckoutScreen() {
                 .map((b) => (
                   <Chip
                     key={b}
-                    label={`${b * settings.loyaltyRedeemBlock} pts`}
+                    label={t('checkout.loyaltyPts', { pts: b * settings.loyaltyRedeemBlock })}
                     selected={loyaltyBlocksToRedeem === b}
                     onPress={() => {
                       setLoyaltyBlocks(b);
-                      setNote('Loyalty applied. Promo cleared.');
+                      setNote(t('checkout.loyaltyApplied'));
                       setError('');
                     }}
                   />
@@ -338,7 +355,7 @@ export function CheckoutScreen() {
             </View>
             {loyaltyBlocksToRedeem > 0 && (
               <Pressable onPress={clearLoyaltyRedeem}>
-                <Text style={styles.clear}>Clear loyalty</Text>
+                <Text style={styles.clear}>{t('checkout.clearLoyalty')}</Text>
               </Pressable>
             )}
           </View>
@@ -347,16 +364,16 @@ export function CheckoutScreen() {
         {!!note && <Text style={styles.note}>{note}</Text>}
 
         <View style={styles.totals}>
-          <Line label="Subtotal" value={formatCents(subtotal)} />
-          <Line label="Discount" value={`−${formatCents(discount)}`} />
-          <Line label={`Tax (${settings.taxRatePercent}%)`} value={formatCents(tax)} />
-          <Line label={`Tip (${tipPercent}%)`} value={formatCents(tip)} />
-          <Line label="Total" value={formatCents(total)} bold />
+          <Line label={t('checkout.subtotal')} value={formatSom(subtotal)} />
+          <Line label={t('checkout.discount')} value={`−${formatSom(discount)}`} />
+          <Line label={t('checkout.tax', { rate: settings.taxRatePercent })} value={formatSom(tax)} />
+          <Line label={t('checkout.tipLine', { percent: tipPercent })} value={formatSom(tip)} />
+          <Line label={t('checkout.total')} value={formatSom(total)} bold />
         </View>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
         <Button
-          label={payState === 'processing' ? 'Processing…' : 'Pay now'}
+          label={payState === 'processing' ? t('checkout.processing') : t('checkout.payNow')}
           onPress={onPay}
           loading={payState === 'processing'}
           disabled={payState === 'processing'}

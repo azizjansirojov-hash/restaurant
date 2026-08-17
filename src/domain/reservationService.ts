@@ -52,7 +52,7 @@ export function createReservationDomain(
     partySize,
     slotStart: slotStart.toISOString(),
     status: 'booked',
-    depositHoldCents: needsDeposit ? settings.peakDepositCents : undefined,
+    depositHoldSom: needsDeposit ? settings.peakDepositSom : undefined,
     depositForfeited: false,
     createdAt,
   };
@@ -69,7 +69,7 @@ export function updateReservationStatusDomain(
   if (!res) return { ok: false, error: 'Reservation not found.' };
 
   let depositForfeited = res.depositForfeited;
-  if (status === 'no_show' && res.depositHoldCents) {
+  if (status === 'no_show' && res.depositHoldSom) {
     depositForfeited = true;
   }
   if (status === 'seated' || status === 'cancelled') {
@@ -104,7 +104,7 @@ export function cancelGuestReservationDomain(
     reservation: {
       ...res,
       status: 'cancelled',
-      depositForfeited: hoursUntil < 2 && !!res.depositHoldCents ? true : false,
+      depositForfeited: hoursUntil < 2 && !!res.depositHoldSom ? true : false,
     },
   };
 }

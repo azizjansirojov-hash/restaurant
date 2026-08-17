@@ -9,9 +9,10 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { colors, radii, spacing } from '../theme/tokens';
 import type { MenuItem } from '../types';
-import { formatCents } from '../utils/money';
+import { formatSom } from '../utils/money';
 import { Button } from './Button';
 
 interface Props {
@@ -22,6 +23,8 @@ interface Props {
 }
 
 export function UpsellSheet({ visible, items, onAdd, onContinue }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.backdrop}>
@@ -30,9 +33,9 @@ export function UpsellSheet({ visible, items, onAdd, onContinue }: Props) {
         </Animated.View>
         <Animated.View entering={SlideInDown.springify().damping(18)} style={styles.sheet}>
           <View style={styles.handle} />
-          <Text style={styles.eyebrow}>Before you pay</Text>
-          <Text style={styles.title}>Complete the table</Text>
-          <Text style={styles.sub}>A little more for the walk home.</Text>
+          <Text style={styles.eyebrow}>{t('components.upsell.eyebrow')}</Text>
+          <Text style={styles.title}>{t('components.upsell.title')}</Text>
+          <Text style={styles.sub}>{t('components.upsell.subtitle')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -48,13 +51,13 @@ export function UpsellSheet({ visible, items, onAdd, onContinue }: Props) {
                 <Image source={{ uri: item.imageUrl }} style={styles.img} contentFit="cover" />
                 <View style={styles.cardBody}>
                   <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.price}>{formatCents(item.priceCents)}</Text>
-                  <Text style={styles.add}>Add +</Text>
+                  <Text style={styles.price}>{formatSom(item.priceSom)}</Text>
+                  <Text style={styles.add}>{t('components.upsell.add')}</Text>
                 </View>
               </Pressable>
             ))}
           </ScrollView>
-          <Button label="Continue to checkout" onPress={onContinue} />
+          <Button label={t('components.upsell.continue')} onPress={onContinue} />
         </Animated.View>
       </View>
     </Modal>

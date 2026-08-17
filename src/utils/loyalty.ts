@@ -9,19 +9,20 @@ export function pointsToNextBlock(balance: number, block: number): number {
 export function maxRedeemableBlocks(
   balance: number,
   block: number,
-  subtotalCents: number,
-  redeemValueCents: number
+  subtotalSom: number,
+  redeemValueSom: number
 ): number {
   const byBalance = Math.floor(balance / block);
-  const bySubtotal = Math.floor(subtotalCents / redeemValueCents);
+  const bySubtotal = Math.floor(subtotalSom / redeemValueSom);
   return Math.max(0, Math.min(byBalance, bySubtotal));
 }
 
+/** Earn points from eligible subtotal (whole som, no fractional units). */
 export function earnPoints(
-  subtotalCents: number,
-  discountCents: number,
+  subtotalSom: number,
+  discountSom: number,
   settings: RestaurantSettings
 ): number {
-  const eligible = Math.max(0, subtotalCents - discountCents);
-  return Math.floor(eligible / 100) * settings.loyaltyEarnPerDollar;
+  const eligible = Math.max(0, subtotalSom - discountSom);
+  return Math.floor(eligible / 1000) * settings.loyaltyEarnPerSom;
 }

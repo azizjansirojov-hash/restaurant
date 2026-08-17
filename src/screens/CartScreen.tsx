@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { UpsellSheet } from '../components/UpsellSheet';
@@ -16,14 +17,16 @@ import type { GuestStackParamList } from '../navigation/types';
 import { useAppMenuItems } from '../hooks/useAppData';
 import { useCartStore } from '../store/useCartStore';
 import { colors, spacing } from '../theme/tokens';
-import { formatCents } from '../utils/money';
+import { cartSubtotalSom } from '../domain/checkout';
+import { formatSom } from '../utils/money';
 
 export function CartScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<GuestStackParamList>>();
   const cart = useCartStore((s) => s.cart);
   const updateCartQty = useCartStore((s) => s.updateCartQty);
   const removeFromCart = useCartStore((s) => s.removeFromCart);
-  const subtotal = cart.reduce((s, c) => s + c.unitPriceCents * c.quantity, 0);
+  const subtotal = cartSubtotalSom(cart);
   const { data: menuItems = [] } = useAppMenuItems();
   const addToCart = useCartStore((s) => s.addToCart);
   const markUpsellShown = useCartStore((s) => s.markUpsellShown);
@@ -49,12 +52,12 @@ export function CartScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.list}>
-        <Text style={styles.eyebrow}>Your order</Text>
-        <Text style={styles.title}>Cart</Text>
+        <Text style={styles.eyebrow}>{t('cart.eyebrow')}</Text>
+        <Text style={styles.title}>{t('cart.title')}</Text>
         {cart.length === 0 ? (
           <View style={styles.emptyWrap}>
-            <Text style={styles.empty}>Your cart is empty.</Text>
-            <Button label="Browse menu" onPress={() => navigation.navigate('Menu')} />
+            <Text style={styles.empty}>{t('cart.empty')}</Text>
+            <Button label={t('cart.browseMenu')} onPress={() => navigation.navigate('Menu')} />
           </View>
         ) : (
           cart.map((c) => (
@@ -66,9 +69,9 @@ export function CartScreen() {
                     {m.modifierName}: {m.optionName}
                   </Text>
                 ))}
-                <Text style={styles.price}>{formatCents(c.unitPriceCents * c.quantity)}</Text>
+                <Text style={styles.price}>{formatSom(c.unitPriceSom * c.quantity)}</Text>
                 <Pressable onPress={() => removeFromCart(c.key)} hitSlop={8}>
-                  <Text style={styles.remove}>Remove</Text>
+                  <Text style={styles.remove}>{t('common.remove')}</Text>
                 </Pressable>
               </View>
               <QuantityStepper
@@ -83,10 +86,10 @@ export function CartScreen() {
       {cart.length > 0 && (
         <View style={styles.footer}>
           <View style={styles.subRow}>
-            <Text style={styles.subLabel}>Subtotal</Text>
-            <Text style={styles.subValue}>{formatCents(subtotal)}</Text>
+            <Text style={styles.subLabel}>{t('cart.subtotal')}</Text>
+            <Text style={styles.subValue}>{formatSom(subtotal)}</Text>
           </View>
-          <Button label="Checkout" onPress={goCheckout} />
+          <Button label={t('cart.checkout')} onPress={goCheckout} />
         </View>
       )}
       <UpsellSheet

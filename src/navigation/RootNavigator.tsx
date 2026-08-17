@@ -1,8 +1,9 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAppRealtime } from '../api/realtime';
 import { useNotificationListener, usePushRegistration } from '../hooks/useNotifications';
 import { useCurrentUser } from '../hooks/useAppData';
@@ -63,14 +64,16 @@ const tabOptions = {
 };
 
 function ProfileLink({ onPress }: { onPress: () => void }) {
+  const { t } = useTranslation();
   return (
     <Pressable onPress={onPress} hitSlop={12} style={{ minHeight: 44, justifyContent: 'center' }}>
-      <Text style={styles.headerLink}>Profile</Text>
+      <Text style={styles.headerLink}>{t('nav.profile')}</Text>
     </Pressable>
   );
 }
 
 function GuestNavigator() {
+  const { t } = useTranslation();
   return (
     <GuestStack.Navigator screenOptions={stackOptions}>
       <GuestStack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
@@ -78,11 +81,11 @@ function GuestNavigator() {
         name="Menu"
         component={MenuScreen}
         options={({ navigation }) => ({
-          title: 'Menu',
+          title: t('nav.menu'),
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <Pressable onPress={() => navigation.navigate('Cart')} hitSlop={12}>
-                <Text style={styles.headerLink}>Cart</Text>
+                <Text style={styles.headerLink}>{t('nav.cart')}</Text>
               </Pressable>
               <ProfileLink onPress={() => navigation.navigate('Profile')} />
             </View>
@@ -90,19 +93,19 @@ function GuestNavigator() {
         })}
       />
       <GuestStack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: '' }} />
-      <GuestStack.Screen name="Cart" component={CartScreen} options={{ title: 'Cart' }} />
-      <GuestStack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
-      <GuestStack.Screen name="OrderStatus" component={OrderStatusScreen} options={{ title: 'Order' }} />
-      <GuestStack.Screen name="OrderHistory" component={OrderHistoryScreen} options={{ title: 'Orders' }} />
-      <GuestStack.Screen name="Reserve" component={ReserveScreen} options={{ title: 'Reserve' }} />
+      <GuestStack.Screen name="Cart" component={CartScreen} options={{ title: t('nav.cart') }} />
+      <GuestStack.Screen name="Checkout" component={CheckoutScreen} options={{ title: t('nav.checkout') }} />
+      <GuestStack.Screen name="OrderStatus" component={OrderStatusScreen} options={{ title: t('nav.order') }} />
+      <GuestStack.Screen name="OrderHistory" component={OrderHistoryScreen} options={{ title: t('nav.orders') }} />
+      <GuestStack.Screen name="Reserve" component={ReserveScreen} options={{ title: t('nav.reserve') }} />
       <GuestStack.Screen
         name="Profile"
         component={ProfileScreen}
         options={({ navigation }) => ({
-          title: 'Profile',
+          title: t('nav.profile'),
           headerRight: () => (
             <Pressable onPress={() => navigation.navigate('OrderHistory')} hitSlop={12}>
-              <Text style={styles.headerLink}>Orders</Text>
+              <Text style={styles.headerLink}>{t('nav.orders')}</Text>
             </Pressable>
           ),
         })}
@@ -112,32 +115,35 @@ function GuestNavigator() {
 }
 
 function StaffNavigator() {
+  const { t } = useTranslation();
   return (
     <StaffTabs.Navigator screenOptions={tabOptions}>
-      <StaffTabs.Screen name="Kitchen" component={KitchenScreen} />
-      <StaffTabs.Screen name="Host" component={HostScreen} />
+      <StaffTabs.Screen name="Kitchen" component={KitchenScreen} options={{ title: t('nav.kitchen') }} />
+      <StaffTabs.Screen name="Host" component={HostScreen} options={{ title: t('nav.host') }} />
     </StaffTabs.Navigator>
   );
 }
 
 function OwnerNavigator() {
+  const { t } = useTranslation();
   return (
     <OwnerTabs.Navigator screenOptions={tabOptions}>
-      <OwnerTabs.Screen name="Kitchen" component={KitchenScreen} />
-      <OwnerTabs.Screen name="Host" component={HostScreen} />
+      <OwnerTabs.Screen name="Kitchen" component={KitchenScreen} options={{ title: t('nav.kitchen') }} />
+      <OwnerTabs.Screen name="Host" component={HostScreen} options={{ title: t('nav.host') }} />
       <OwnerTabs.Screen
         name="MenuManager"
         component={MenuManagerScreen}
-        options={{ title: 'Menu' }}
+        options={{ title: t('nav.menuManager') }}
       />
-      <OwnerTabs.Screen name="Analytics" component={AnalyticsScreen} />
-      <OwnerTabs.Screen name="Promos" component={PromosScreen} />
-      <OwnerTabs.Screen name="Settings" component={SettingsScreen} />
+      <OwnerTabs.Screen name="Analytics" component={AnalyticsScreen} options={{ title: t('nav.analytics') }} />
+      <OwnerTabs.Screen name="Promos" component={PromosScreen} options={{ title: t('nav.promos') }} />
+      <OwnerTabs.Screen name="Settings" component={SettingsScreen} options={{ title: t('nav.settings') }} />
     </OwnerTabs.Navigator>
   );
 }
 
 export function RootNavigator() {
+  const { t } = useTranslation();
   const { phase } = useAuth();
   const user = useCurrentUser();
   const localSim = useLocalServerStore((s) => s.sim.currentUser);
@@ -158,7 +164,7 @@ export function RootNavigator() {
     return (
       <View style={styles.boot}>
         <ActivityIndicator color={colors.pomegranate} />
-        <Text style={styles.bootText}>Lale</Text>
+        <Text style={styles.bootText}>{t('common.appName')}</Text>
       </View>
     );
   }

@@ -21,7 +21,7 @@ async function main() {
     category_id: item.categoryId,
     name: item.name,
     description: item.description,
-    price_cents: item.priceCents,
+    price_som: item.priceSom,
     image_url: item.imageUrl,
     allergens: item.allergens,
     modifiers: item.modifiers,

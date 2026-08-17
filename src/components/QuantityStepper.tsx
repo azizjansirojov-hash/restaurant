@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, minTap, radii } from '../theme/tokens';
 
 interface Props {
@@ -9,12 +10,14 @@ interface Props {
 }
 
 export function QuantityStepper({ value, onChange, min = 1 }: Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.row}>
       <Pressable
         onPress={() => onChange(Math.max(min, value - 1))}
         style={styles.btn}
-        accessibilityLabel="Decrease quantity"
+        accessibilityLabel={t('common.decreaseQty')}
       >
         <Text style={styles.sym}>−</Text>
       </Pressable>
@@ -22,7 +25,7 @@ export function QuantityStepper({ value, onChange, min = 1 }: Props) {
       <Pressable
         onPress={() => onChange(value + 1)}
         style={styles.btn}
-        accessibilityLabel="Increase quantity"
+        accessibilityLabel={t('common.increaseQty')}
       >
         <Text style={styles.sym}>+</Text>
       </Pressable>

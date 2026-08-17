@@ -3,15 +3,15 @@
  * Run: npx tsx scripts/store-flow-qa.ts
  */
 import assert from 'node:assert/strict';
-import { seedMenuItems } from '../src/data/seed';
-import { discountCents, type CheckoutInput } from '../src/domain/checkout';
+import { seedMenuItems, seedSettings } from '../src/data/seed';
+import { discountSom, type CheckoutInput } from '../src/domain/checkout';
 import { createSimulatorState, simulatorActions } from '../src/domain/storeSimulator';
 
 async function main() {
   let state = createSimulatorState();
 
   console.log('\n→ Auth guest');
-  let r = simulatorActions.loginGuest(state, '5559998888', 'Ayla');
+  let r = simulatorActions.loginGuest(state, '901234567', 'Ayla');
   assert.equal(r.ok, true);
   state = r.state;
   assert.equal(state.currentUser?.role, 'guest');
@@ -23,7 +23,7 @@ async function main() {
       modifierId: 'mod_spice',
       modifierName: 'Spice level',
       optionName: 'Hot',
-      priceCents: 0,
+      priceSom: 0,
     },
   ]);
   assert.equal(state.cart.length, 1);
@@ -35,7 +35,7 @@ async function main() {
   console.log('→ Upsell + pay');
   state = simulatorActions.markUpsellShown(state);
   state = simulatorActions.applyPromo(state, 'WELCOME10').state;
-  const beforePay = state.cart.reduce((s, c) => s + c.unitPriceCents * c.quantity, 0);
+  const beforePay = state.cart.reduce((s, c) => s + c.unitPriceSom * c.quantity, 0);
   assert.ok(beforePay > 0);
   r = simulatorActions.placeOrder(state);
   assert.equal(r.ok, true);
@@ -79,7 +79,7 @@ async function main() {
     loyaltyBlocksToRedeem: state.loyaltyBlocksToRedeem,
     promos: state.promos,
   };
-  assert.equal(discountCents(checkoutInput), 1000);
+  assert.equal(discountSom(checkoutInput), seedSettings.loyaltyRedeemValueSom);
   r = simulatorActions.placeOrder(state);
   assert.equal(r.ok, true);
   state = r.state;
@@ -100,11 +100,11 @@ async function main() {
   state = simulatorActions.removeFromCart(state, key);
   assert.equal(state.upsellShownForCheckout, false);
 
-  console.log('→ Custom tip clear restores default 18%');
+  console.log('→ Custom tip clear restores default 0%');
   state = simulatorActions.setCustomTipPercent(state, '22');
   assert.equal(state.tipPercent, 22);
   state = simulatorActions.setCustomTipPercent(state, '');
-  assert.equal(state.tipPercent, 18);
+  assert.equal(state.tipPercent, 0);
 
   console.log('→ Delivery disable forces pickup');
   state = simulatorActions.updateSettings(state, { deliveryEnabled: true });

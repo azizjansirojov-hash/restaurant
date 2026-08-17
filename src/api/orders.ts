@@ -161,8 +161,8 @@ export function useCreateOrder() {
         ok: boolean;
         error?: string;
         order_id?: string;
-        subtotal_cents?: number;
-        total_cents?: number;
+        subtotal_som?: number;
+        total_som?: number;
         requires_payment?: boolean;
       };
       if (!result.ok) throw new Error(result.error ?? 'Failed to create order');

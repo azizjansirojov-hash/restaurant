@@ -20,7 +20,7 @@ export type LoyaltyReason = 'earn' | 'redeem' | 'adjust';
 
 export interface ModifierOption {
   name: string;
-  priceCents: number;
+  priceSom: number;
 }
 
 export interface Modifier {
@@ -41,7 +41,7 @@ export interface MenuItem {
   categoryId: string;
   name: string;
   description: string;
-  priceCents: number;
+  priceSom: number;
   imageUrl: string;
   allergens: string[];
   modifiers: Modifier[];
@@ -64,14 +64,14 @@ export interface SelectedModifier {
   modifierId: string;
   modifierName: string;
   optionName: string;
-  priceCents: number;
+  priceSom: number;
 }
 
 export interface CartItem {
   key: string;
   menuItemId: string;
   name: string;
-  unitPriceCents: number;
+  unitPriceSom: number;
   quantity: number;
   selectedModifiers: SelectedModifier[];
   imageUrl: string;
@@ -82,7 +82,7 @@ export interface OrderItem {
   orderId: string;
   menuItemId: string;
   nameSnapshot: string;
-  unitPriceCents: number;
+  unitPriceSom: number;
   modifiersSnapshot: SelectedModifier[];
   quantity: number;
 }
@@ -92,11 +92,11 @@ export interface Order {
   userId: string;
   status: OrderStatus;
   fulfillmentType: FulfillmentType;
-  subtotalCents: number;
-  taxCents: number;
-  tipCents: number;
-  discountCents: number;
-  totalCents: number;
+  subtotalSom: number;
+  taxSom: number;
+  tipSom: number;
+  discountSom: number;
+  totalSom: number;
   promoCodeId?: string;
   loyaltyRedeemedPoints?: number;
   paymentIntentId: string;
@@ -113,7 +113,7 @@ export interface Reservation {
   partySize: number;
   slotStart: string;
   status: ReservationStatus;
-  depositHoldCents?: number;
+  depositHoldSom?: number;
   depositForfeited: boolean;
   createdAt: string;
 }
@@ -154,11 +154,11 @@ export interface RestaurantSettings {
   taxRatePercent: number;
   tipPresets: number[];
   defaultTipPercent: number;
-  loyaltyEarnPerDollar: number;
+  loyaltyEarnPerSom: number;
   loyaltyRedeemBlock: number;
-  loyaltyRedeemValueCents: number;
+  loyaltyRedeemValueSom: number;
   peakDepositEnabled: boolean;
-  peakDepositCents: number;
+  peakDepositSom: number;
   slotCapacity: number;
 }
 

@@ -7,6 +7,7 @@ import { queryClient, queryKeys } from '../providers/QueryProvider';
 import { createSimulatorState } from '../domain/storeSimulator';
 import { useLocalServerStore } from '../store/useLocalServerStore';
 import type { User } from '../types';
+import { toE164 } from '../utils/phone';
 
 type AuthPhase = 'loading' | 'signed_out' | 'signed_in';
 
@@ -21,13 +22,6 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-function toE164(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.startsWith('1') && digits.length === 11) return `+${digits}`;
-  return digits.startsWith('+') ? phone : `+${digits}`;
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [phase, setPhase] = useState<AuthPhase>('loading');

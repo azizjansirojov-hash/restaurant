@@ -1,13 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
-import { useAppReservations } from '../hooks/useAppData';
+import { useAppReservations, useAppSettings } from '../hooks/useAppData';
 import { useReservationActions } from '../hooks/useAppActions';
 import { colors, spacing } from '../theme/tokens';
 import { formatSlotLabel } from '../utils/reservations';
 
 export function HostScreen() {
+  const { t } = useTranslation();
+  const { data: settings } = useAppSettings();
   const { data: reservations = [] } = useAppReservations();
   const { updateReservationStatus } = useReservationActions();
 
@@ -18,8 +21,8 @@ export function HostScreen() {
     end.setHours(23, 59, 59, 999);
     return reservations
       .filter((r) => {
-        const t = new Date(r.slotStart).getTime();
-        return t >= start.getTime() && t <= end.getTime() && r.status !== 'cancelled';
+        const t0 = new Date(r.slotStart).getTime();
+        return t0 >= start.getTime() && t0 <= end.getTime() && r.status !== 'cancelled';
       })
       .sort((a, b) => +new Date(a.slotStart) - +new Date(b.slotStart));
   }, [reservations]);
@@ -27,32 +30,35 @@ export function HostScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Front of house</Text>
-        <Text style={styles.title}>Host</Text>
+        <Text style={styles.eyebrow}>{t('host.eyebrow')}</Text>
+        <Text style={styles.title}>{t('host.title')}</Text>
       </View>
       <FlatList
         data={tonight}
         keyExtractor={(r) => r.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>No reservations for today.</Text>
+          <Text style={styles.empty}>{t('host.empty')}</Text>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.time}>{formatSlotLabel(new Date(item.slotStart))}</Text>
+            <Text style={styles.time}>
+              {formatSlotLabel(new Date(item.slotStart), settings?.timezone)}
+            </Text>
             <Text style={styles.meta}>
-              Party of {item.partySize} · {item.status}
+              {t('common.partyOf', { count: item.partySize })} ·{' '}
+              {t(`reservation.status.${item.status}`)}
             </Text>
             {(item.status === 'booked' || item.status === 'reminded') && (
               <View style={styles.actions}>
                 <Button
-                  label="Seated"
+                  label={t('host.seated')}
                   variant="olive"
                   onPress={() => updateReservationStatus(item.id, 'seated')}
                   style={{ flex: 1 }}
                 />
                 <Button
-                  label="No-show"
+                  label={t('host.noShow')}
                   variant="secondary"
                   onPress={() => updateReservationStatus(item.id, 'no_show')}
                   style={{ flex: 1 }}
@@ -61,7 +67,7 @@ export function HostScreen() {
             )}
             {(item.status === 'booked' || item.status === 'reminded') && (
               <Button
-                label="Cancel"
+                label={t('host.cancel')}
                 variant="ghost"
                 onPress={() => updateReservationStatus(item.id, 'cancelled')}
                 style={{ marginTop: 8 }}

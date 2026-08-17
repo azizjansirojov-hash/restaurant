@@ -35,7 +35,7 @@ export async function createPaymentIntent(orderId: string): Promise<PaymentInten
 
 export async function createDepositHold(
   reservationId: string,
-  amountCents: number
+  amountSom: number
 ): Promise<PaymentIntentResult> {
   if (!isSupabaseConfigured()) {
     throw new Error('Deposits require Supabase configuration.');
@@ -51,7 +51,7 @@ export async function createDepositHold(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session.session.access_token}`,
     },
-    body: JSON.stringify({ reservationId, amountCents }),
+    body: JSON.stringify({ reservationId, amountSom }),
   });
 
   if (!res.ok) {

@@ -37,7 +37,7 @@ export interface Database {
           category_id: string;
           name: string;
           description: string;
-          price_cents: number;
+          price_som: number;
           image_url: string;
           allergens: Json;
           modifiers: Json;
@@ -75,11 +75,11 @@ export interface Database {
           tax_rate_percent: number;
           tip_presets: number[];
           default_tip_percent: number;
-          loyalty_earn_per_dollar: number;
+          loyalty_earn_per_som: number;
           loyalty_redeem_block: number;
-          loyalty_redeem_value_cents: number;
+          loyalty_redeem_value_som: number;
           peak_deposit_enabled: boolean;
-          peak_deposit_cents: number;
+          peak_deposit_som: number;
           slot_capacity: number;
         };
         Insert: Database['public']['Tables']['restaurant_settings']['Row'];
@@ -98,11 +98,11 @@ export interface Database {
             | 'completed'
             | 'cancelled';
           fulfillment_type: 'pickup' | 'delivery';
-          subtotal_cents: number;
-          tax_cents: number;
-          tip_cents: number;
-          discount_cents: number;
-          total_cents: number;
+          subtotal_som: number;
+          tax_som: number;
+          tip_som: number;
+          discount_som: number;
+          total_som: number;
           promo_code_id: string | null;
           loyalty_redeemed_points: number | null;
           payment_intent_id: string | null;
@@ -116,11 +116,11 @@ export interface Database {
           user_id: string;
           status?: Database['public']['Tables']['orders']['Row']['status'];
           fulfillment_type: 'pickup' | 'delivery';
-          subtotal_cents: number;
-          tax_cents: number;
-          tip_cents: number;
-          discount_cents?: number;
-          total_cents: number;
+          subtotal_som: number;
+          tax_som: number;
+          tip_som: number;
+          discount_som?: number;
+          total_som: number;
           promo_code_id?: string | null;
           loyalty_redeemed_points?: number | null;
           payment_intent_id?: string | null;
@@ -138,7 +138,7 @@ export interface Database {
           order_id: string;
           menu_item_id: string;
           name_snapshot: string;
-          unit_price_cents: number;
+          unit_price_som: number;
           modifiers_snapshot: Json;
           quantity: number;
         };
@@ -147,7 +147,7 @@ export interface Database {
           order_id: string;
           menu_item_id: string;
           name_snapshot: string;
-          unit_price_cents: number;
+          unit_price_som: number;
           modifiers_snapshot?: Json;
           quantity: number;
         };
@@ -161,7 +161,7 @@ export interface Database {
           party_size: number;
           slot_start: string;
           status: 'booked' | 'reminded' | 'seated' | 'no_show' | 'cancelled';
-          deposit_hold_cents: number | null;
+          deposit_hold_som: number | null;
           deposit_stripe_payment_intent_id: string | null;
           deposit_forfeited: boolean;
           created_at: string;
@@ -172,7 +172,7 @@ export interface Database {
           party_size: number;
           slot_start: string;
           status?: Database['public']['Tables']['reservations']['Row']['status'];
-          deposit_hold_cents?: number | null;
+          deposit_hold_som?: number | null;
           deposit_stripe_payment_intent_id?: string | null;
           deposit_forfeited?: boolean;
           created_at?: string;

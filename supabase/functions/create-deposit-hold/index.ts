@@ -28,16 +28,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const { reservationId, amountCents } = await req.json();
-    if (!reservationId || !amountCents) {
-      return new Response(JSON.stringify({ error: 'reservationId and amountCents required' }), {
+    const { reservationId, amountSom } = await req.json();
+    if (!reservationId || !amountSom) {
+      return new Response(JSON.stringify({ error: 'reservationId and amountSom required' }), {
         status: 400,
       });
     }
 
     const intent = await stripe.paymentIntents.create({
-      amount: amountCents,
-      currency: 'usd',
+      amount: amountSom,
+      currency: 'uzs',
       capture_method: 'manual',
       metadata: { reservation_id: reservationId, type: 'deposit_hold' },
       automatic_payment_methods: { enabled: true },

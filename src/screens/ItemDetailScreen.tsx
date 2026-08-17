@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { QuantityStepper } from '../components/QuantityStepper';
 import type { GuestStackParamList } from '../navigation/types';
@@ -17,9 +18,10 @@ import { useAppMenuItems } from '../hooks/useAppData';
 import { useCartStore } from '../store/useCartStore';
 import { colors, spacing } from '../theme/tokens';
 import type { SelectedModifier } from '../types';
-import { formatCents } from '../utils/money';
+import { formatSom } from '../utils/money';
 
 export function ItemDetailScreen() {
+  const { t } = useTranslation();
   const route = useRoute<RouteProp<GuestStackParamList, 'ItemDetail'>>();
   const navigation = useNavigation<NativeStackNavigationProp<GuestStackParamList>>();
   const { data: menuItems = [] } = useAppMenuItems();
@@ -35,15 +37,15 @@ export function ItemDetailScreen() {
     item.modifiers.forEach((mod) => {
       const optName = picks[mod.id];
       const opt = mod.options.find((o) => o.name === optName);
-      if (opt) extra += opt.priceCents;
+      if (opt) extra += opt.priceSom;
     });
-    return item.priceCents + extra;
+    return item.priceSom + extra;
   }, [item, picks]);
 
   if (!item) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text style={styles.error}>Item not found.</Text>
+        <Text style={styles.error}>{t('itemDetail.notFound')}</Text>
       </SafeAreaView>
     );
   }
@@ -53,7 +55,7 @@ export function ItemDetailScreen() {
     for (const mod of item.modifiers) {
       const optName = picks[mod.id];
       if (mod.required && !optName) {
-        setError(`Choose ${mod.name}.`);
+        setError(t('itemDetail.chooseModifier', { name: mod.name }));
         return;
       }
       if (optName) {
@@ -62,7 +64,7 @@ export function ItemDetailScreen() {
           modifierId: mod.id,
           modifierName: mod.name,
           optionName: opt.name,
-          priceCents: opt.priceCents,
+          priceSom: opt.priceSom,
         });
       }
     }
@@ -75,18 +77,20 @@ export function ItemDetailScreen() {
       <ScrollView bounces={false}>
         <Image source={{ uri: item.imageUrl }} style={styles.hero} contentFit="cover" />
         <View style={styles.body}>
-          <Text style={styles.eyebrow}>From the kitchen</Text>
+          <Text style={styles.eyebrow}>{t('itemDetail.fromKitchen')}</Text>
           <Text style={styles.name}>{item.name}</Text>
           <Text style={styles.desc}>{item.description}</Text>
           {item.allergens.length > 0 && (
-            <Text style={styles.allergens}>Contains {item.allergens.join(', ')}</Text>
+            <Text style={styles.allergens}>
+              {t('common.contains', { allergens: item.allergens.join(', ') })}
+            </Text>
           )}
 
           {item.modifiers.map((mod) => (
             <View key={mod.id} style={styles.modBlock}>
               <Text style={styles.modTitle}>
                 {mod.name}
-                {mod.required ? ' · required' : ''}
+                {mod.required ? ` · ${t('common.required')}` : ''}
               </Text>
               {mod.options.map((opt) => {
                 const active = picks[mod.id] === opt.name;
@@ -97,8 +101,8 @@ export function ItemDetailScreen() {
                     style={[styles.opt, active && styles.optOn]}
                   >
                     <Text style={[styles.optText, active && styles.optTextOn]}>{opt.name}</Text>
-                    {opt.priceCents > 0 && (
-                      <Text style={styles.optPrice}>+{formatCents(opt.priceCents)}</Text>
+                    {opt.priceSom > 0 && (
+                      <Text style={styles.optPrice}>+{formatSom(opt.priceSom)}</Text>
                     )}
                   </Pressable>
                 );
@@ -107,7 +111,7 @@ export function ItemDetailScreen() {
           ))}
 
           <View style={styles.qtyBlock}>
-            <Text style={styles.modTitle}>Quantity</Text>
+            <Text style={styles.modTitle}>{t('common.quantity')}</Text>
             <QuantityStepper value={qty} onChange={setQty} />
           </View>
 
@@ -116,7 +120,11 @@ export function ItemDetailScreen() {
       </ScrollView>
       <View style={styles.footer}>
         <Button
-          label={item.isAvailable ? `Add · ${formatCents(unit * qty)}` : 'Sold out'}
+          label={
+            item.isAvailable
+              ? t('itemDetail.add', { amount: formatSom(unit * qty) })
+              : t('common.soldOut')
+          }
           onPress={add}
           disabled={!item.isAvailable}
         />

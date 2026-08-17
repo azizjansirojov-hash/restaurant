@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
 import { DEMO_ACCOUNTS } from '../data/seed';
@@ -16,8 +17,14 @@ import { isSupabaseConfigured, isDev } from '../lib/env';
 import { useAuth } from '../providers/AuthProvider';
 import { useLocalServerStore } from '../store/useLocalServerStore';
 import { colors, spacing } from '../theme/tokens';
+import {
+  formatPhoneDisplay,
+  isValidUzMobile,
+  phoneInputPlaceholder,
+} from '../utils/phone';
 
 export function OTPScreen() {
+  const { t } = useTranslation();
   const { sendOtp, verifyOtp } = useAuth();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -28,8 +35,8 @@ export function OTPScreen() {
   const [verifying, setVerifying] = useState(false);
 
   const sendCode = async () => {
-    if (phone.replace(/\D/g, '').length < 10) {
-      setError('Enter a valid 10-digit phone number.');
+    if (!isValidUzMobile(phone)) {
+      setError(t('errors.invalidPhone'));
       return;
     }
     setError('');
@@ -37,7 +44,7 @@ export function OTPScreen() {
     const res = await sendOtp(phone);
     setSending(false);
     if (!res.ok) {
-      setError(res.error || 'Could not send code.');
+      setError(res.error || t('errors.sendCodeFailed'));
       return;
     }
     setStep('otp');
@@ -48,13 +55,13 @@ export function OTPScreen() {
     setError('');
     const res = await verifyOtp(phone, otp, name);
     setVerifying(false);
-    if (!res.ok) setError(res.error || 'Could not sign in.');
+    if (!res.ok) setError(res.error || t('errors.verifyFailed'));
   };
 
   const localDevLogin = (role: 'guest' | 'staff' | 'owner') => {
     let sim = createSimulatorState();
     if (role === 'guest') {
-      const r = simulatorActions.loginGuest(sim, phone || '5559998888', name || 'Guest');
+      const r = simulatorActions.loginGuest(sim, phone || '909998888', name || 'Guest');
       sim = r.state;
       useLocalServerStore.setState({ sim, localGuest: sim.currentUser });
     } else if (role === 'staff') {
@@ -73,38 +80,38 @@ export function OTPScreen() {
         style={styles.wrap}
       >
         <Animated.View entering={FadeInDown.duration(600)}>
-          <Text style={styles.eyebrow}>Welcome</Text>
-          <Text style={styles.brand}>Lale</Text>
-          <Text style={styles.tag}>Sign in with your phone to order direct.</Text>
+          <Text style={styles.eyebrow}>{t('auth.eyebrow')}</Text>
+          <Text style={styles.brand}>{t('common.appName')}</Text>
+          <Text style={styles.tag}>{t('auth.tagline')}</Text>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(120).duration(600)} style={styles.form}>
           {!isSupabaseConfigured() && (
-            <Text style={styles.warn}>
-              Supabase is not configured. Use local dev sign-in below, or add env vars for real
-              phone auth.
-            </Text>
+            <Text style={styles.warn}>{t('auth.supabaseWarn')}</Text>
           )}
 
           {isSupabaseConfigured() && step === 'phone' ? (
             <>
               <TextField
-                label="Phone"
+                label={t('auth.phone')}
                 keyboardType="phone-pad"
-                placeholder="5551234567"
+                placeholder={phoneInputPlaceholder()}
                 value={phone}
                 onChangeText={setPhone}
                 autoFocus
               />
+              {phone.length > 0 && isValidUzMobile(phone) && (
+                <Text style={styles.phonePreview}>{formatPhoneDisplay(phone)}</Text>
+              )}
               <TextField
-                label="Name"
-                placeholder="Your name"
+                label={t('auth.name')}
+                placeholder={t('auth.namePlaceholder')}
                 value={name}
                 onChangeText={setName}
-                hint="First-time guests — how should we greet you?"
+                hint={t('auth.nameHint')}
               />
               <Button
-                label={sending ? 'Sending…' : 'Send code'}
+                label={sending ? t('auth.sending') : t('auth.sendCode')}
                 onPress={sendCode}
                 loading={sending}
                 style={{ marginTop: 8 }}
@@ -112,22 +119,23 @@ export function OTPScreen() {
             </>
           ) : isSupabaseConfigured() ? (
             <>
+              <Text style={styles.phonePreview}>{formatPhoneDisplay(phone)}</Text>
               <TextField
-                label="One-time code"
+                label={t('auth.otp')}
                 keyboardType="number-pad"
-                placeholder="••••••"
+                placeholder={t('auth.otpPlaceholder')}
                 value={otp}
                 onChangeText={setOtp}
                 autoFocus
               />
               <Button
-                label={verifying ? 'Verifying…' : 'Verify & continue'}
+                label={verifying ? t('auth.verifying') : t('auth.verify')}
                 onPress={verify}
                 loading={verifying}
                 style={{ marginTop: 8 }}
               />
               <Button
-                label="Change phone"
+                label={t('auth.changePhone')}
                 onPress={() => setStep('phone')}
                 variant="ghost"
                 style={{ marginTop: 16 }}
@@ -140,16 +148,16 @@ export function OTPScreen() {
 
         {isDev && !isSupabaseConfigured() && (
           <View style={styles.demo}>
-            <Text style={styles.demoTitle}>Local dev sign-in</Text>
-            <Button label="Guest" onPress={() => localDevLogin('guest')} variant="secondary" />
+            <Text style={styles.demoTitle}>{t('auth.localDevTitle')}</Text>
+            <Button label={t('auth.guest')} onPress={() => localDevLogin('guest')} variant="secondary" />
             <Button
-              label="Staff"
+              label={t('auth.staff')}
               onPress={() => localDevLogin('staff')}
               variant="secondary"
               style={{ marginTop: 8 }}
             />
             <Button
-              label="Owner"
+              label={t('auth.owner')}
               onPress={() => localDevLogin('owner')}
               variant="secondary"
               style={{ marginTop: 8 }}
@@ -159,9 +167,13 @@ export function OTPScreen() {
 
         {isDev && isSupabaseConfigured() && (
           <View style={styles.demo}>
-            <Text style={styles.demoTitle}>Staff phones (seed in DB)</Text>
-            <Text style={styles.demoLine}>Staff · {DEMO_ACCOUNTS.staffPhone}</Text>
-            <Text style={styles.demoLine}>Owner · {DEMO_ACCOUNTS.ownerPhone}</Text>
+            <Text style={styles.demoTitle}>{t('auth.staffPhonesTitle')}</Text>
+            <Text style={styles.demoLine}>
+              {t('auth.staffPhone', { phone: formatPhoneDisplay(DEMO_ACCOUNTS.staffPhone) })}
+            </Text>
+            <Text style={styles.demoLine}>
+              {t('auth.ownerPhone', { phone: formatPhoneDisplay(DEMO_ACCOUNTS.ownerPhone) })}
+            </Text>
           </View>
         )}
       </KeyboardAvoidingView>
@@ -201,6 +213,12 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   form: { gap: 14, marginTop: spacing.xl },
+  phonePreview: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 14,
+    color: colors.olive,
+    marginTop: -6,
+  },
   warn: {
     fontFamily: 'DMSans_400Regular',
     fontSize: 13,

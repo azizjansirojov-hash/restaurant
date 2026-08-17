@@ -9,7 +9,7 @@ import type {
   User,
 } from '../types';
 import { earnPoints } from '../utils/loyalty';
-import { discountCents, type CheckoutInput, validatePlaceOrder } from './checkout';
+import { discountSom, type CheckoutInput, validatePlaceOrder } from './checkout';
 
 export const ORDER_FLOW: OrderStatus[] = ['received', 'preparing', 'ready', 'completed'];
 
@@ -22,7 +22,7 @@ export interface OrderDomainState {
 
 export interface PlaceOrderResult {
   ok: boolean;
-  error?: string;
+  errorCode?: import('./errorCodes').ErrorCode;
   order?: Order;
   statePatch?: Partial<OrderDomainState & { currentUser?: User }>;
 }
@@ -32,7 +32,7 @@ export function buildOrderItems(orderId: string, cart: CartItem[]): OrderItem[] 
     orderId,
     menuItemId: c.menuItemId,
     nameSnapshot: c.name,
-    unitPriceCents: c.unitPriceCents,
+    unitPriceSom: c.unitPriceSom,
     modifiersSnapshot: c.selectedModifiers,
     quantity: c.quantity,
   }));
@@ -49,8 +49,8 @@ export function placeOrderDomain(
   if (!validation.ok) return validation;
 
   const user = input.user!;
-  const subtotal = input.cart.reduce((s, c) => s + c.unitPriceCents * c.quantity, 0);
-  const discount = discountCents(input);
+  const subtotal = input.cart.reduce((s, c) => s + c.unitPriceSom * c.quantity, 0);
+  const discount = discountSom(input);
   const tax = Math.round(
     Math.max(0, subtotal - discount) * (input.settings.taxRatePercent / 100)
   );
@@ -63,11 +63,11 @@ export function placeOrderDomain(
     userId: user.id,
     status: 'received',
     fulfillmentType: input.fulfillmentType,
-    subtotalCents: subtotal,
-    taxCents: tax,
-    tipCents: tip,
-    discountCents: discount,
-    totalCents: total,
+    subtotalSom: subtotal,
+    taxSom: tax,
+    tipSom: tip,
+    discountSom: discount,
+    totalSom: total,
     promoCodeId: input.discountMode === 'promo' ? input.appliedPromoId : undefined,
     loyaltyRedeemedPoints: pointsToRedeem > 0 ? pointsToRedeem : undefined,
     paymentIntentId: paymentIntentId ?? '',
@@ -123,18 +123,18 @@ export function bumpOrderStatusDomain(
   now: string
 ): {
   ok: boolean;
-  error?: string;
+  errorCode?: import('./errorCodes').ErrorCode;
   patch?: Partial<OrderDomainState & { currentUser?: User }>;
   notify?: { title: string; body: string };
 } {
   const order = state.orders.find((o) => o.id === orderId);
-  if (!order) return { ok: false, error: 'Order not found.' };
+  if (!order) return { ok: false, errorCode: 'orderNotFound' };
   if (order.status === 'cancelled' || order.status === 'completed') {
-    return { ok: false, error: 'Order cannot be advanced.' };
+    return { ok: false, errorCode: 'unknown' };
   }
   const idx = ORDER_FLOW.indexOf(order.status);
   if (idx < 0 || idx >= ORDER_FLOW.length - 1) {
-    return { ok: false, error: 'Invalid status.' };
+    return { ok: false, errorCode: 'unknown' };
   }
   const next = ORDER_FLOW[idx + 1];
   let patch: Partial<Order> = { status: next };
@@ -150,11 +150,10 @@ export function bumpOrderStatusDomain(
 
   let ledger = state.loyaltyLedger;
   let users = state.users;
-  let currentUser: User | undefined;
 
   if (next === 'completed') {
     patch.completedAt = now;
-    const points = earnPoints(order.subtotalCents, order.discountCents, settings);
+    const points = earnPoints(order.subtotalSom, order.discountSom, settings);
     if (points > 0) {
       ledger = [
         ...ledger,
@@ -189,11 +188,11 @@ export function cancelOrderDomain(
   reason: string,
   state: OrderDomainState,
   now: string
-): { ok: boolean; error?: string; patch?: Partial<OrderDomainState & { currentUser?: User }> } {
+): { ok: boolean; errorCode?: import('./errorCodes').ErrorCode; patch?: Partial<OrderDomainState & { currentUser?: User }> } {
   const order = state.orders.find((o) => o.id === orderId);
-  if (!order) return { ok: false, error: 'Order not found.' };
+  if (!order) return { ok: false, errorCode: 'orderNotFound' };
   if (order.status === 'completed' || order.status === 'cancelled') {
-    return { ok: false, error: 'Cannot cancel this order.' };
+    return { ok: false, errorCode: 'unknown' };
   }
 
   let ledger = [...state.loyaltyLedger];

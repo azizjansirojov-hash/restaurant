@@ -8,10 +8,10 @@ import { appendFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { seedCategories, seedMenuItems, seedPromos, seedSettings } from '../src/data/seed';
 import {
-  discountCents,
-  taxCents,
-  tipCents,
-  totalCents,
+  discountSom,
+  taxSom,
+  tipSom,
+  totalSom,
   validatePlaceOrder,
   type CheckoutInput,
 } from '../src/domain/checkout';
@@ -179,20 +179,20 @@ async function main() {
   log(
     'Step 1.4 Required modifier enforcement',
     'validateModifiersAndUnitPrice(adana, []) — mirrors ItemDetailScreen.add() + RPC',
-    modCheck.ok ? 'UNEXPECTED: allowed without spice mod' : `rejected: ${(modCheck as { error: string }).error}`,
+    modCheck.ok ? 'UNEXPECTED: allowed without spice mod' : `rejected: ${(modCheck as { errorCode: string }).errorCode}`,
     !modCheck.ok ? 'pass' : 'fail',
     'H1'
   );
 
   state = simulatorActions.addToCart(state, adana, 1, [
-    { modifierId: 'mod_spice', modifierName: 'Spice level', optionName: 'Hot', priceCents: 0 },
+    { modifierId: 'mod_spice', modifierName: 'Spice level', optionName: 'Hot', priceSom: 0 },
   ]);
   const blocked = simulatorActions.placeOrder(state);
   log(
     'Step 1.5 Upsell gate',
     'placeOrder without markUpsellShown',
-    `ok=${blocked.ok}, error="${blocked.error}"`,
-    !blocked.ok && blocked.error?.includes('upsell') ? 'pass' : 'fail',
+    `ok=${blocked.ok}, errorCode="${blocked.errorCode}"`,
+    !blocked.ok && blocked.errorCode === 'upsellRequired' ? 'pass' : 'fail',
     'H2'
   );
 
@@ -224,42 +224,42 @@ async function main() {
     promos: state.promos,
   };
   const handTotal =
-    Math.max(0, state.cart.reduce((s, c) => s + c.unitPriceCents * c.quantity, 0) - discountCents(checkoutInput)) +
-    taxCents(checkoutInput) +
-    tipCents(checkoutInput);
+    Math.max(0, state.cart.reduce((s, c) => s + c.unitPriceSom * c.quantity, 0) - discountSom(checkoutInput)) +
+    taxSom(checkoutInput) +
+    tipSom(checkoutInput);
   const placed = simulatorActions.placeOrder(state);
   state = placed.state;
   const order = state.orders[0];
   log(
     'Step 1.7 Checkout (local simulator)',
     'simulatorActions.placeOrder after upsell+promo',
-    `path=local simulator (isLocalFallbackMode=true), totalCents=${order.totalCents}, handCalc=${handTotal}, status=${order.status}`,
-    placed.ok && order.totalCents === handTotal && order.status === 'received' ? 'pass' : 'fail'
+    `path=local simulator (isLocalFallbackMode=true), totalSom=${order.totalSom}, handCalc=${handTotal}, status=${order.status}`,
+    placed.ok && order.totalSom === handTotal && order.status === 'received' ? 'pass' : 'fail'
   );
 
   const tampered = computeCreateOrderTotals(seedMenuItems, seedSettings, seedPromos, {
     items: [
       {
         menu_item_id: adana.id,
-        unit_price_cents: 1,
+        unit_price_som: 1,
         modifiers_snapshot: [
-          { modifierId: 'mod_spice', modifierName: 'Spice', optionName: 'Hot', priceCents: 9999 },
+          { modifierId: 'mod_spice', modifierName: 'Spice', optionName: 'Hot', priceSom: 9999 },
         ],
         quantity: 1,
       },
     ],
     fulfillment_type: 'pickup',
-    tip_percent: 18,
+    tip_percent: 10,
     discount_mode: 'none',
     loyalty_blocks: 0,
   }, 0);
   log(
     'Step 1.8 Price tampering adversarial',
-    'computeCreateOrderTotals with unit_price_cents=1 (TS mirror of migration 002 RPC)',
+    'computeCreateOrderTotals with unit_price_som=1 (TS mirror of migration 002 RPC)',
     tampered.ok
-      ? `subtotal=${tampered.subtotalCents}, unit=${tampered.lines[0].unitPriceCents} (expected 2400). LIVE RPC NOT TESTED — no Supabase.`
-      : `error=${(tampered as { error: string }).error}`,
-    tampered.ok && tampered.lines[0].unitPriceCents === 2400 && tampered.subtotalCents === 2400 ? 'pass' : 'fail',
+      ? `subtotal=${tampered.subtotalSom}, unit=${tampered.lines[0].unitPriceSom} (expected 78000). LIVE RPC NOT TESTED — no Supabase.`
+      : `errorCode=${(tampered as { errorCode: string }).errorCode}`,
+    tampered.ok && tampered.lines[0].unitPriceSom === 78000 && tampered.subtotalSom === 78000 ? 'pass' : 'fail',
     'H4'
   );
 
@@ -283,8 +283,8 @@ async function main() {
   log(
     'Step 1.10 Peak reservation deposit flag',
     `createReservationDomain at ${peakSlot.toISOString()}, isPeak=${isPeakSlot(peakSlot)}, peakDepositEnabled=true`,
-    `requiresDeposit=${peakRes.requiresDeposit}, depositHoldCents=${peakRes.reservation?.depositHoldCents}. Seed default peakDepositEnabled=${seedSettings.peakDepositEnabled}.`,
-    peakRes.ok && peakRes.requiresDeposit && peakRes.reservation?.depositHoldCents === 2500 ? 'pass' : 'fail'
+    `requiresDeposit=${peakRes.requiresDeposit}, depositHoldSom=${peakRes.reservation?.depositHoldSom}. Seed default peakDepositEnabled=${seedSettings.peakDepositEnabled}.`,
+    peakRes.ok && peakRes.requiresDeposit && peakRes.reservation?.depositHoldSom === 200000 ? 'pass' : 'fail'
   );
 
   const reservations: Reservation[] = [];
@@ -318,7 +318,7 @@ async function main() {
   state = simulatorActions.loginStaff(state).state;
   state = simulatorActions.loginGuest(createSimulatorState(), guestPhone, 'Guest').state;
   state = simulatorActions.addToCart(state, adana, 1, [
-    { modifierId: 'mod_spice', modifierName: 'Spice', optionName: 'Hot', priceCents: 0 },
+    { modifierId: 'mod_spice', modifierName: 'Spice', optionName: 'Hot', priceSom: 0 },
   ]);
   state = simulatorActions.markUpsellShown(state);
   const staffOrder = simulatorActions.placeOrder(state);
@@ -431,14 +431,14 @@ async function main() {
   log(
     'Step 4.1 Empty cart rejection',
     'validatePlaceOrder with cart=[]',
-    `ok=${empty.ok}, error="${empty.error}"`,
-    !empty.ok && empty.error?.includes('empty') ? 'pass' : 'fail'
+    `ok=${empty.ok}, errorCode="${empty.errorCode}"`,
+    !empty.ok && empty.errorCode === 'cartEmpty' ? 'pass' : 'fail'
   );
 
   state = simulatorActions.loginGuest(createSimulatorState(), guestPhone, 'Guest').state;
   state = simulatorActions.setUserBalance(state, 10);
   state = simulatorActions.addToCart(state, adana, 1, [
-    { modifierId: 'mod_spice', modifierName: 'Spice', optionName: 'Hot', priceCents: 0 },
+    { modifierId: 'mod_spice', modifierName: 'Spice', optionName: 'Hot', priceSom: 0 },
   ]);
   state = simulatorActions.markUpsellShown(state);
   state = simulatorActions.setLoyaltyBlocks(state, 5);
@@ -446,8 +446,8 @@ async function main() {
   log(
     'Step 4.2 Excess loyalty redemption',
     'placeOrder with 5 blocks but balance=10 (need 500)',
-    `ok=${overLoyalty.ok}, error="${overLoyalty.error}"`,
-    !overLoyalty.ok && overLoyalty.error?.includes('loyalty') ? 'pass' : 'fail'
+    `ok=${overLoyalty.ok}, errorCode="${overLoyalty.errorCode}"`,
+    !overLoyalty.ok && overLoyalty.errorCode === 'notEnoughLoyalty' ? 'pass' : 'fail'
   );
 
   const pastSlots = generateSlots(seedSettings, new Date(), []);

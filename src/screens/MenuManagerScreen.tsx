@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
 import { useAppCategories, useAppMenuItems } from '../hooks/useAppData';
@@ -10,10 +11,11 @@ import { isSupabaseConfigured } from '../lib/env';
 import type { MenuItem } from '../types';
 import { useLocalServerStore } from '../store/useLocalServerStore';
 import { colors, spacing } from '../theme/tokens';
-import { formatCents } from '../utils/money';
+import { formatSom } from '../utils/money';
 import { createId } from '../utils/id';
 
 export function MenuManagerScreen() {
+  const { t } = useTranslation();
   const { data: menuItems = [] } = useAppMenuItems();
   const { data: categories = [] } = useAppCategories();
   const { toggleItemAvailable, updateMenuItem } = useOwnerActions();
@@ -32,7 +34,7 @@ export function MenuManagerScreen() {
       categoryId: categories[0]?.id ?? 'cat_meze',
       name: '',
       description: '',
-      priceCents: 0,
+      priceSom: 0,
       imageUrl: '',
       allergens: [],
       modifiers: [],
@@ -44,7 +46,7 @@ export function MenuManagerScreen() {
       categoryId: categories[0]?.id ?? 'cat_meze',
       name: '',
       description: '',
-      priceCents: 0,
+      priceSom: 0,
       isAvailable: true,
     });
   };
@@ -56,7 +58,7 @@ export function MenuManagerScreen() {
       ...draft,
       name: draft.name?.trim() || editing.name,
       description: draft.description ?? editing.description,
-      priceCents: Number(draft.priceCents ?? editing.priceCents),
+      priceSom: Number(draft.priceSom ?? editing.priceSom),
       categoryId: draft.categoryId ?? editing.categoryId,
     } as MenuItem;
 
@@ -81,10 +83,10 @@ export function MenuManagerScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Owner</Text>
-        <Text style={styles.title}>Menu</Text>
-        <Text style={styles.sub}>Edit prices, categories, availability.</Text>
-        <Button label="Add item" variant="secondary" onPress={openNew} style={{ marginTop: 12 }} />
+        <Text style={styles.eyebrow}>{t('menuManager.eyebrow')}</Text>
+        <Text style={styles.title}>{t('menuManager.title')}</Text>
+        <Text style={styles.sub}>{t('menuManager.subtitle')}</Text>
+        <Button label={t('menuManager.addItem')} variant="secondary" onPress={openNew} style={{ marginTop: 12 }} />
       </View>
       <FlatList
         data={[...menuItems].sort((a, b) => a.sortOrder - b.sortOrder)}
@@ -97,7 +99,7 @@ export function MenuManagerScreen() {
               <Pressable style={{ flex: 1 }} onPress={() => openEdit(item)}>
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.meta}>
-                  {cat} · {formatCents(item.priceCents)}
+                  {cat} · {formatSom(item.priceSom)}
                 </Text>
               </Pressable>
               <Pressable
@@ -105,7 +107,7 @@ export function MenuManagerScreen() {
                 style={[styles.toggle, !item.isAvailable && styles.toggleOff]}
               >
                 <Text style={styles.toggleText}>
-                  {item.isAvailable ? 'Available' : 'Sold out'}
+                  {item.isAvailable ? t('common.available') : t('menuManager.soldOut')}
                 </Text>
               </Pressable>
             </View>
@@ -115,20 +117,26 @@ export function MenuManagerScreen() {
 
       <Modal visible={!!editing} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modal}>
-          <Text style={styles.modalTitle}>{draft.name ? 'Edit item' : 'New item'}</Text>
-          <TextField label="Name" value={draft.name ?? ''} onChangeText={(v) => setDraft({ ...draft, name: v })} />
+          <Text style={styles.modalTitle}>
+            {draft.name ? t('menuManager.editItem') : t('menuManager.newItem')}
+          </Text>
           <TextField
-            label="Description"
+            label={t('menuManager.name')}
+            value={draft.name ?? ''}
+            onChangeText={(v) => setDraft({ ...draft, name: v })}
+          />
+          <TextField
+            label={t('menuManager.description')}
             value={draft.description ?? ''}
             onChangeText={(v) => setDraft({ ...draft, description: v })}
           />
           <TextField
-            label="Price ($)"
-            keyboardType="decimal-pad"
-            value={draft.priceCents != null ? String(draft.priceCents / 100) : ''}
-            onChangeText={(v) => setDraft({ ...draft, priceCents: Math.round(Number(v || 0) * 100) })}
+            label={t('menuManager.priceSom')}
+            keyboardType="number-pad"
+            value={draft.priceSom != null ? String(draft.priceSom) : ''}
+            onChangeText={(v) => setDraft({ ...draft, priceSom: Math.round(Number(v || 0)) })}
           />
-          <Text style={styles.catLabel}>Category</Text>
+          <Text style={styles.catLabel}>{t('menuManager.category')}</Text>
           <View style={styles.catRow}>
             {categories.map((c) => (
               <Pressable
@@ -140,11 +148,11 @@ export function MenuManagerScreen() {
               </Pressable>
             ))}
           </View>
-          <Button label="Save" onPress={saveItem} style={{ marginTop: 16 }} />
+          <Button label={t('common.save')} onPress={saveItem} style={{ marginTop: 16 }} />
           {editing && menuItems.some((m) => m.id === editing.id) && isSupabaseConfigured() && (
-            <Button label="Delete" variant="ghost" onPress={removeItem} style={{ marginTop: 8 }} />
+            <Button label={t('common.delete')} variant="ghost" onPress={removeItem} style={{ marginTop: 8 }} />
           )}
-          <Button label="Cancel" variant="ghost" onPress={() => setEditing(null)} style={{ marginTop: 8 }} />
+          <Button label={t('common.cancel')} variant="ghost" onPress={() => setEditing(null)} style={{ marginTop: 8 }} />
         </SafeAreaView>
       </Modal>
     </SafeAreaView>

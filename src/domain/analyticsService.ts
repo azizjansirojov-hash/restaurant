@@ -23,8 +23,8 @@ export function dayAnalytics(
       o.status === 'preparing' ||
       o.status === 'received'
   );
-  const gmv = completed.reduce((s, o) => s + o.totalCents, 0);
-  const tips = completed.reduce((s, o) => s + o.tipCents, 0);
+  const gmv = completed.reduce((s, o) => s + o.totalSom, 0);
+  const tips = completed.reduce((s, o) => s + o.tipSom, 0);
   const withUpsell = completed.filter((o) =>
     o.items.some((it) => {
       const menu = menuItems.find((m) => m.id === it.menuItemId);
@@ -55,9 +55,9 @@ export function dayAnalytics(
 
   return {
     ordersCount: completed.length,
-    gmvCents: gmv,
-    aovCents: completed.length ? Math.round(gmv / completed.length) : 0,
-    tipTotalCents: tips,
+    gmvSom: gmv,
+    aovSom: completed.length ? Math.round(gmv / completed.length) : 0,
+    tipTotalSom: tips,
     upsellAttachRate: completed.length ? withUpsell / completed.length : 0,
     noShowRate: closedRes.length
       ? noShows / closedRes.length

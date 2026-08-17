@@ -1,25 +1,21 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, Layout } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../theme/tokens';
 import type { OrderStatus } from '../types';
 
 const STEPS: OrderStatus[] = ['received', 'preparing', 'ready', 'completed'];
-const LABELS: Record<OrderStatus, string> = {
-  received: 'Received',
-  preparing: 'Preparing',
-  ready: 'Ready',
-  completed: 'Done',
-  cancelled: 'Cancelled',
-};
 
 interface Props {
   status: OrderStatus;
 }
 
 export function OrderStatusStepper({ status }: Props) {
+  const { t } = useTranslation();
+
   if (status === 'cancelled') {
-    return <Text style={styles.cancelled}>Order cancelled</Text>;
+    return <Text style={styles.cancelled}>{t('order.stepper.cancelled')}</Text>;
   }
   const idx = STEPS.indexOf(status);
 
@@ -46,7 +42,7 @@ export function OrderStatusStepper({ status }: Props) {
               ]}
             />
             <Text style={[styles.label, active && styles.labelActive]}>
-              {LABELS[step]}
+              {t(`order.stepper.${step}`)}
             </Text>
           </Animated.View>
         );

@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
+import { Chip } from '../components/Chip';
 import { LoyaltyRing } from '../components/LoyaltyRing';
 import { TextField } from '../components/TextField';
 import { useAppReservations, useAppSettings, useCurrentUser } from '../hooks/useAppData';
@@ -9,10 +11,13 @@ import { useReservationActions } from '../hooks/useAppActions';
 import { useAuth } from '../providers/AuthProvider';
 import { useUpdateProfile } from '../api/profile';
 import { isDev, isSupabaseConfigured } from '../lib/env';
+import { setAppLocale, type AppLocale } from '../i18n';
 import { colors, spacing } from '../theme/tokens';
+import { formatPhoneDisplay } from '../utils/phone';
 import { formatSlotLabel } from '../utils/reservations';
 
 export function ProfileScreen() {
+  const { t, i18n } = useTranslation();
   const user = useCurrentUser();
   const { data: settings } = useAppSettings();
   const { data: reservations = [] } = useAppReservations();
@@ -20,6 +25,8 @@ export function ProfileScreen() {
   const { logout } = useAuth();
   const updateProfile = useUpdateProfile();
   const [name, setName] = useState(user?.name || '');
+
+  const locale = (i18n.language === 'ru' ? 'ru' : 'uz') as AppLocale;
 
   const upcoming = useMemo(
     () =>
@@ -43,28 +50,48 @@ export function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.eyebrow}>Account</Text>
-        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.eyebrow}>{t('profile.eyebrow')}</Text>
+        <Text style={styles.title}>{t('profile.title')}</Text>
         <View style={styles.loyalty}>
-          <LoyaltyRing balance={user.loyaltyBalance} block={settings.loyaltyRedeemBlock} />
+          <LoyaltyRing
+            balance={user.loyaltyBalance}
+            block={settings.loyaltyRedeemBlock}
+          />
         </View>
-        <TextField label="Name" value={name} onChangeText={setName} onBlur={saveName} />
-        <Text style={styles.meta}>Phone · {user.phone}</Text>
+        <TextField label={t('profile.name')} value={name} onChangeText={setName} onBlur={saveName} />
+        <Text style={styles.meta}>
+          {t('profile.phone')} · {formatPhoneDisplay(user.phone)}
+        </Text>
 
-        <Text style={styles.section}>Upcoming reservations</Text>
+        <Text style={styles.section}>{t('profile.language')}</Text>
+        <View style={styles.langRow}>
+          <Chip
+            label={t('profile.langUz')}
+            selected={locale === 'uz'}
+            onPress={() => setAppLocale('uz')}
+          />
+          <Chip
+            label={t('profile.langRu')}
+            selected={locale === 'ru'}
+            onPress={() => setAppLocale('ru')}
+          />
+        </View>
+
+        <Text style={styles.section}>{t('reservation.upcoming')}</Text>
         {upcoming.length === 0 ? (
-          <Text style={styles.empty}>None scheduled.</Text>
+          <Text style={styles.empty}>{t('reservation.noneScheduled')}</Text>
         ) : (
           upcoming.map((r) => (
             <View key={r.id} style={styles.resRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.resTitle}>
-                  Party of {r.partySize} · {formatSlotLabel(new Date(r.slotStart))}
+                  {t('common.partyOf', { count: r.partySize })} ·{' '}
+                  {formatSlotLabel(new Date(r.slotStart), settings.timezone)}
                 </Text>
-                <Text style={styles.resMeta}>{r.status}</Text>
+                <Text style={styles.resMeta}>{t(`reservation.status.${r.status}`)}</Text>
               </View>
               <Pressable onPress={() => cancelGuestReservation(r.id)} hitSlop={8}>
-                <Text style={styles.cancel}>Cancel</Text>
+                <Text style={styles.cancel}>{t('reservation.cancel')}</Text>
               </Pressable>
             </View>
           ))
@@ -72,13 +99,13 @@ export function ProfileScreen() {
 
         {isDev && !isSupabaseConfigured() && (
           <Button
-            label="Simulate 2h reminder pass (QA)"
+            label={t('profile.simulateReminder')}
             variant="secondary"
             onPress={runReminderPass}
             style={{ marginTop: 24 }}
           />
         )}
-        <Button label="Sign out" variant="ghost" onPress={logout} style={{ marginTop: 16 }} />
+        <Button label={t('profile.signOut')} variant="ghost" onPress={logout} style={{ marginTop: 16 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -117,6 +144,7 @@ const styles = StyleSheet.create({
     marginTop: 28,
     marginBottom: 4,
   },
+  langRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   empty: {
     fontFamily: 'DMSans_400Regular',
     color: colors.inkFaint,

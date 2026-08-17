@@ -4,14 +4,16 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { OrderStatusStepper } from '../components/OrderStatusStepper';
 import type { GuestStackParamList } from '../navigation/types';
 import { useAppOrder, useAppSettings, useLastNotification } from '../hooks/useAppData';
 import { colors, spacing } from '../theme/tokens';
-import { formatCents } from '../utils/money';
+import { formatSom } from '../utils/money';
 
 export function OrderStatusScreen() {
+  const { t } = useTranslation();
   const route = useRoute<RouteProp<GuestStackParamList, 'OrderStatus'>>();
   const navigation = useNavigation<NativeStackNavigationProp<GuestStackParamList>>();
   const order = useAppOrder(route.params.orderId);
@@ -21,8 +23,8 @@ export function OrderStatusScreen() {
   if (!order || !settings) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text style={styles.miss}>Order not found.</Text>
-        <Button label="Back home" onPress={() => navigation.navigate('Home')} />
+        <Text style={styles.miss}>{t('order.notFound')}</Text>
+        <Button label={t('order.backHome')} onPress={() => navigation.navigate('Home')} />
       </SafeAreaView>
     );
   }
@@ -30,12 +32,12 @@ export function OrderStatusScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <Animated.View entering={FadeIn.duration(400)} style={styles.body}>
-        <Text style={styles.eyebrow}>In progress</Text>
-        <Text style={styles.title}>Your order</Text>
+        <Text style={styles.eyebrow}>{t('order.eyebrow')}</Text>
+        <Text style={styles.title}>{t('order.title')}</Text>
         <Text style={styles.meta}>
           {order.fulfillmentType === 'pickup'
-            ? `Pickup · about ${settings.pickupEtaMinutes} minutes`
-            : 'Delivery'}
+            ? t('order.pickupEta', { minutes: settings.pickupEtaMinutes })
+            : t('order.delivery')}
         </Text>
         <OrderStatusStepper status={order.status} />
         <View style={styles.items}>
@@ -45,20 +47,22 @@ export function OrderStatusScreen() {
             </Text>
           ))}
         </View>
-        <Text style={styles.total}>Total {formatCents(order.totalCents)}</Text>
+        <Text style={styles.total}>
+          {t('order.total', { amount: formatSom(order.totalSom) })}
+        </Text>
         {order.status === 'ready' && (
           <View style={styles.pushBox}>
             <Text style={styles.push}>
               {lastNotification?.title?.includes('ready')
                 ? lastNotification.title
-                : 'Lale — your order is ready for pickup'}
+                : t('order.readyPush')}
             </Text>
           </View>
         )}
         <View style={styles.actions}>
-          <Button label="Order history" onPress={() => navigation.navigate('OrderHistory')} />
+          <Button label={t('order.history')} onPress={() => navigation.navigate('OrderHistory')} />
           <Button
-            label="Back home"
+            label={t('order.backHome')}
             variant="ghost"
             onPress={() => navigation.navigate('Home')}
           />

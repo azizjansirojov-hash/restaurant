@@ -6,6 +6,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../theme/tokens';
 import { pointsToNextBlock } from '../utils/loyalty';
 
@@ -24,6 +25,7 @@ export function LoyaltyRing({
   size = 76,
   compact = false,
 }: Props) {
+  const { t } = useTranslation();
   const stroke = compact ? 5 : 6;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
@@ -42,7 +44,10 @@ export function LoyaltyRing({
   const toNext = pointsToNextBlock(balance, block);
 
   return (
-    <View style={styles.wrap} accessibilityLabel={`Loyalty ${balance} points`}>
+    <View
+      style={styles.wrap}
+      accessibilityLabel={t('components.loyalty.accessibility', { balance })}
+    >
       <View style={{ width: size, height: size }}>
         <Svg width={size} height={size}>
           <Circle
@@ -68,11 +73,13 @@ export function LoyaltyRing({
         </Svg>
         <View style={[styles.center, { width: size, height: size }]}>
           <Text style={[styles.pts, compact && styles.ptsSm]}>{balance}</Text>
-          <Text style={styles.sub}>pts</Text>
+          <Text style={styles.sub}>{t('common.pts')}</Text>
         </View>
       </View>
       {!compact && (
-        <Text style={styles.hint}>You’re {toNext} points from $10 off</Text>
+        <Text style={styles.hint}>
+          {t('components.loyalty.hint', { points: toNext })}
+        </Text>
       )}
     </View>
   );

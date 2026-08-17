@@ -34,7 +34,7 @@ interface CartState {
   resetCheckoutFlags: (defaultTip: number) => void;
   setTipPercent: (p: number) => void;
   setCustomTipPercent: (v: string, defaultTip: number) => void;
-  applyPromo: (code: string, promos: PromoCode[]) => { ok: boolean; error?: string };
+  applyPromo: (code: string, promos: PromoCode[]) => { ok: boolean; errorCode?: string };
   clearPromo: () => void;
   setLoyaltyBlocks: (blocks: number) => void;
   clearLoyaltyRedeem: () => void;
@@ -47,19 +47,19 @@ export const useCartStore = create<CartState>()(
       fulfillmentType: 'pickup',
       deliveryAddress: '',
       upsellShownForCheckout: false,
-      tipPercent: 18,
+      tipPercent: 0,
       customTipPercent: '',
       discountMode: 'none',
       promoCodeInput: '',
       loyaltyBlocksToRedeem: 0,
 
       addToCart: (item, qty, mods, isUpsell) => {
-        const unit = item.priceCents + mods.reduce((s, m) => s + m.priceCents, 0);
+        const unit = item.priceSom + mods.reduce((s, m) => s + m.priceSom, 0);
         const entry: CartItem = {
           key: createId('cart'),
           menuItemId: item.id,
           name: item.name,
-          unitPriceCents: unit,
+          unitPriceSom: unit,
           quantity: qty,
           selectedModifiers: mods,
           imageUrl: item.imageUrl,

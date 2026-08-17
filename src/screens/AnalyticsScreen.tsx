@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { dayAnalytics } from '../domain/analyticsService';
 import {
   useAppLoyaltyLedger,
@@ -9,9 +10,10 @@ import {
   useAppReservations,
 } from '../hooks/useAppData';
 import { colors, spacing } from '../theme/tokens';
-import { formatCents } from '../utils/money';
+import { formatSom } from '../utils/money';
 
 export function AnalyticsScreen() {
+  const { t } = useTranslation();
   const { data: orders = [] } = useAppOrders();
   const { data: reservations = [] } = useAppReservations();
   const { data: loyaltyLedger = [] } = useAppLoyaltyLedger();
@@ -25,24 +27,24 @@ export function AnalyticsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.eyebrow}>Owner</Text>
-        <Text style={styles.title}>Today</Text>
-        <Metric label="Direct orders" value={String(stats.ordersCount)} />
-        <Metric label="GMV" value={formatCents(stats.gmvCents)} />
-        <Metric label="AOV" value={formatCents(stats.aovCents)} />
-        <Metric label="Tips" value={formatCents(stats.tipTotalCents)} />
+        <Text style={styles.eyebrow}>{t('analytics.eyebrow')}</Text>
+        <Text style={styles.title}>{t('analytics.title')}</Text>
+        <Metric label={t('analytics.directOrders')} value={String(stats.ordersCount)} />
+        <Metric label={t('analytics.gmv')} value={formatSom(stats.gmvSom)} />
+        <Metric label={t('analytics.aov')} value={formatSom(stats.aovSom)} />
+        <Metric label={t('analytics.tips')} value={formatSom(stats.tipTotalSom)} />
         <Metric
-          label="Upsell attach"
+          label={t('analytics.upsellAttach')}
           value={`${Math.round(stats.upsellAttachRate * 100)}%`}
         />
         <Metric
-          label="No-show rate"
+          label={t('analytics.noShowRate')}
           value={`${Math.round(stats.noShowRate * 100)}%`}
         />
-        <Metric label="Loyalty earned" value={`${stats.loyaltyEarned} pts`} />
-        <Metric label="Loyalty redeemed" value={`${stats.loyaltyRedeemed} pts`} />
+        <Metric label={t('analytics.loyaltyEarned')} value={`${stats.loyaltyEarned} ${t('common.pts')}`} />
+        <Metric label={t('analytics.loyaltyRedeemed')} value={`${stats.loyaltyRedeemed} ${t('common.pts')}`} />
         <Metric
-          label="Repeat rate (30d)"
+          label={t('analytics.repeatRate')}
           value={`${Math.round(stats.repeatRate * 100)}%`}
         />
       </ScrollView>

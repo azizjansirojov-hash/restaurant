@@ -41,7 +41,7 @@ export function mapMenuItem(row: MenuItemRow): MenuItem {
     categoryId: row.category_id,
     name: row.name,
     description: row.description,
-    priceCents: row.price_cents,
+    priceSom: row.price_som,
     imageUrl: row.image_url,
     allergens: row.allergens as string[],
     modifiers: row.modifiers as unknown as Modifier[],
@@ -66,11 +66,11 @@ export function mapSettings(row: SettingsRow): RestaurantSettings {
     taxRatePercent: Number(row.tax_rate_percent),
     tipPresets: row.tip_presets,
     defaultTipPercent: row.default_tip_percent,
-    loyaltyEarnPerDollar: row.loyalty_earn_per_dollar,
+    loyaltyEarnPerSom: row.loyalty_earn_per_som,
     loyaltyRedeemBlock: row.loyalty_redeem_block,
-    loyaltyRedeemValueCents: row.loyalty_redeem_value_cents,
+    loyaltyRedeemValueSom: row.loyalty_redeem_value_som,
     peakDepositEnabled: row.peak_deposit_enabled,
-    peakDepositCents: row.peak_deposit_cents,
+    peakDepositSom: row.peak_deposit_som,
     slotCapacity: row.slot_capacity,
   };
 }
@@ -92,7 +92,7 @@ export function mapOrderItem(row: OrderItemRow): OrderItem {
     orderId: row.order_id,
     menuItemId: row.menu_item_id,
     nameSnapshot: row.name_snapshot,
-    unitPriceCents: row.unit_price_cents,
+    unitPriceSom: row.unit_price_som,
     modifiersSnapshot: row.modifiers_snapshot as unknown as SelectedModifier[],
     quantity: row.quantity,
   };
@@ -105,11 +105,11 @@ export function mapOrder(row: OrderRow, items: OrderItem[]): Order {
     userId: row.user_id,
     status: status as Order['status'],
     fulfillmentType: row.fulfillment_type,
-    subtotalCents: row.subtotal_cents,
-    taxCents: row.tax_cents,
-    tipCents: row.tip_cents,
-    discountCents: row.discount_cents,
-    totalCents: row.total_cents,
+    subtotalSom: row.subtotal_som,
+    taxSom: row.tax_som,
+    tipSom: row.tip_som,
+    discountSom: row.discount_som,
+    totalSom: row.total_som,
     promoCodeId: row.promo_code_id ?? undefined,
     loyaltyRedeemedPoints: row.loyalty_redeemed_points ?? undefined,
     paymentIntentId: row.payment_intent_id ?? '',
@@ -128,7 +128,7 @@ export function mapReservation(row: ReservationRow): Reservation {
     partySize: row.party_size,
     slotStart: row.slot_start,
     status: row.status,
-    depositHoldCents: row.deposit_hold_cents ?? undefined,
+    depositHoldSom: row.deposit_hold_som ?? undefined,
     depositForfeited: row.deposit_forfeited,
     createdAt: row.created_at,
   };
@@ -151,7 +151,7 @@ export function menuItemToDb(item: MenuItem) {
     category_id: item.categoryId,
     name: item.name,
     description: item.description,
-    price_cents: item.priceCents,
+    price_som: item.priceSom,
     image_url: item.imageUrl,
     allergens: item.allergens,
     modifiers: item.modifiers,
@@ -172,11 +172,11 @@ export function settingsToDbPatch(patch: Partial<RestaurantSettings>) {
   if (patch.taxRatePercent != null) out.tax_rate_percent = patch.taxRatePercent;
   if (patch.tipPresets != null) out.tip_presets = patch.tipPresets;
   if (patch.defaultTipPercent != null) out.default_tip_percent = patch.defaultTipPercent;
-  if (patch.loyaltyEarnPerDollar != null) out.loyalty_earn_per_dollar = patch.loyaltyEarnPerDollar;
+  if (patch.loyaltyEarnPerSom != null) out.loyalty_earn_per_som = patch.loyaltyEarnPerSom;
   if (patch.loyaltyRedeemBlock != null) out.loyalty_redeem_block = patch.loyaltyRedeemBlock;
-  if (patch.loyaltyRedeemValueCents != null) out.loyalty_redeem_value_cents = patch.loyaltyRedeemValueCents;
+  if (patch.loyaltyRedeemValueSom != null) out.loyalty_redeem_value_som = patch.loyaltyRedeemValueSom;
   if (patch.peakDepositEnabled != null) out.peak_deposit_enabled = patch.peakDepositEnabled;
-  if (patch.peakDepositCents != null) out.peak_deposit_cents = patch.peakDepositCents;
+  if (patch.peakDepositSom != null) out.peak_deposit_som = patch.peakDepositSom;
   if (patch.slotCapacity != null) out.slot_capacity = patch.slotCapacity;
   return out;
 }

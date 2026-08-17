@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { Chip } from '../components/Chip';
 import { TextField } from '../components/TextField';
@@ -9,8 +10,10 @@ import { useOwnerActions } from '../hooks/useAppActions';
 import { useAddPromo, useTogglePromoActive } from '../api/owner';
 import { isSupabaseConfigured } from '../lib/env';
 import { colors, spacing } from '../theme/tokens';
+import { formatSom } from '../utils/money';
 
 export function PromosScreen() {
+  const { t } = useTranslation();
   const { data: promos = [] } = useAppPromos();
   const { addPromoLocal, togglePromoLocal } = useOwnerActions();
   const addPromoRemote = useAddPromo();
@@ -25,7 +28,7 @@ export function PromosScreen() {
     const promo = {
       code: code.trim().toUpperCase(),
       type,
-      value: type === 'percent' ? n : Math.round(n * 100),
+      value: type === 'percent' ? n : Math.round(n),
       active: true,
     };
     if (isSupabaseConfigured()) {
@@ -47,29 +50,33 @@ export function PromosScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Owner</Text>
-        <Text style={styles.title}>Promos</Text>
+        <Text style={styles.eyebrow}>{t('promos.eyebrow')}</Text>
+        <Text style={styles.title}>{t('promos.title')}</Text>
       </View>
       <View style={styles.form}>
         <TextField
-          label="Code"
-          placeholder="CODE"
+          label={t('promos.code')}
+          placeholder={t('promos.codePlaceholder')}
           autoCapitalize="characters"
           value={code}
           onChangeText={setCode}
         />
         <View style={styles.row}>
-          <Chip label="%" selected={type === 'percent'} onPress={() => setType('percent')} />
-          <Chip label="$ off" selected={type === 'fixed'} onPress={() => setType('fixed')} />
+          <Chip label={t('promos.percent')} selected={type === 'percent'} onPress={() => setType('percent')} />
+          <Chip label={t('promos.fixedOff')} selected={type === 'fixed'} onPress={() => setType('fixed')} />
         </View>
         <TextField
-          label="Value"
-          placeholder={type === 'percent' ? '10' : '5'}
+          label={t('promos.value')}
+          placeholder={
+            type === 'percent'
+              ? t('promos.valuePercentPlaceholder')
+              : t('promos.valueFixedPlaceholder')
+          }
           keyboardType="decimal-pad"
           value={value}
           onChangeText={setValue}
         />
-        <Button label="Add promo" onPress={onAdd} />
+        <Button label={t('promos.addPromo')} onPress={onAdd} />
       </View>
       <FlatList
         data={promos}
@@ -80,11 +87,14 @@ export function PromosScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.code}>{item.code}</Text>
               <Text style={styles.meta}>
-                {item.type === 'percent' ? `${item.value}%` : `$${(item.value / 100).toFixed(0)}`} ·{' '}
-                {item.active ? 'Active' : 'Off'} · used {item.redemptionCount}
+                {item.type === 'percent' ? `${item.value}%` : formatSom(item.value)} ·{' '}
+                {item.active ? t('promos.active') : t('promos.off')} ·{' '}
+                {t('promos.used', { count: item.redemptionCount })}
               </Text>
             </View>
-            <Text style={styles.toggle}>{item.active ? 'Disable' : 'Enable'}</Text>
+            <Text style={styles.toggle}>
+              {item.active ? t('common.disable') : t('common.enable')}
+            </Text>
           </Pressable>
         )}
       />

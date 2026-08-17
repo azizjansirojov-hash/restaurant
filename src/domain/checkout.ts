@@ -1,33 +1,25 @@
-import type {
-  CartItem,
-  DiscountMode,
-  FulfillmentType,
-  PromoCode,
-  RestaurantSettings,
-  User,
-} from '../types';
-import { calcTax, calcTip } from '../utils/money';
+import type { ErrorCode } from './errorCodes';
 
 export interface CheckoutInput {
-  cart: CartItem[];
-  settings: RestaurantSettings;
-  user: User | null;
-  fulfillmentType: FulfillmentType;
+  cart: import('../types').CartItem[];
+  settings: import('../types').RestaurantSettings;
+  user: import('../types').User | null;
+  fulfillmentType: import('../types').FulfillmentType;
   deliveryAddress: string;
   upsellShownForCheckout: boolean;
   tipPercent: number;
-  discountMode: DiscountMode;
+  discountMode: import('../types').DiscountMode;
   appliedPromoId?: string;
   loyaltyBlocksToRedeem: number;
-  promos: PromoCode[];
+  promos: import('../types').PromoCode[];
 }
 
-export function cartSubtotalCents(cart: CartItem[]): number {
-  return cart.reduce((s, c) => s + c.unitPriceCents * c.quantity, 0);
+export function cartSubtotalSom(cart: CheckoutInput['cart']): number {
+  return cart.reduce((s, c) => s + c.unitPriceSom * c.quantity, 0);
 }
 
-export function discountCents(input: CheckoutInput): number {
-  const sub = cartSubtotalCents(input.cart);
+export function discountSom(input: CheckoutInput): number {
+  const sub = cartSubtotalSom(input.cart);
   const { discountMode, appliedPromoId, loyaltyBlocksToRedeem, settings, promos } = input;
   if (discountMode === 'promo' && appliedPromoId) {
     const promo = promos.find((p) => p.id === appliedPromoId);
@@ -38,65 +30,65 @@ export function discountCents(input: CheckoutInput): number {
     return Math.min(sub, promo.value);
   }
   if (discountMode === 'loyalty' && loyaltyBlocksToRedeem > 0) {
-    return Math.min(sub, loyaltyBlocksToRedeem * settings.loyaltyRedeemValueCents);
+    return Math.min(sub, loyaltyBlocksToRedeem * settings.loyaltyRedeemValueSom);
   }
   return 0;
 }
 
-export function taxCents(input: CheckoutInput): number {
-  const after = Math.max(0, cartSubtotalCents(input.cart) - discountCents(input));
-  return calcTax(after, input.settings.taxRatePercent);
+export function taxSom(input: CheckoutInput): number {
+  const after = Math.max(0, cartSubtotalSom(input.cart) - discountSom(input));
+  return Math.round(after * (input.settings.taxRatePercent / 100));
 }
 
-export function tipCents(input: CheckoutInput): number {
-  const after = Math.max(0, cartSubtotalCents(input.cart) - discountCents(input));
-  return calcTip(after, input.tipPercent);
+export function tipSom(input: CheckoutInput): number {
+  const after = Math.max(0, cartSubtotalSom(input.cart) - discountSom(input));
+  return Math.round(after * (input.tipPercent / 100));
 }
 
-export function totalCents(input: CheckoutInput): number {
+export function totalSom(input: CheckoutInput): number {
   return (
-    Math.max(0, cartSubtotalCents(input.cart) - discountCents(input)) +
-    taxCents(input) +
-    tipCents(input)
+    Math.max(0, cartSubtotalSom(input.cart) - discountSom(input)) +
+    taxSom(input) +
+    tipSom(input)
   );
 }
 
-export function validatePlaceOrder(input: CheckoutInput): { ok: boolean; error?: string } {
+export function validatePlaceOrder(input: CheckoutInput): { ok: boolean; errorCode?: ErrorCode } {
   const { user, cart, upsellShownForCheckout, fulfillmentType, deliveryAddress, settings } = input;
   if (!user || user.role !== 'guest') {
-    return { ok: false, error: 'Sign in as a guest to order.' };
+    return { ok: false, errorCode: 'signInGuest' };
   }
   if (cart.length === 0) {
-    return { ok: false, error: 'Your cart is empty.' };
+    return { ok: false, errorCode: 'cartEmpty' };
   }
   if (!upsellShownForCheckout) {
-    return { ok: false, error: 'Complete the table upsell must be shown first.' };
+    return { ok: false, errorCode: 'upsellRequired' };
   }
   if (fulfillmentType === 'delivery') {
     if (!settings.deliveryEnabled) {
-      return { ok: false, error: 'Delivery is not available.' };
+      return { ok: false, errorCode: 'deliveryUnavailable' };
     }
     if (!deliveryAddress.trim()) {
-      return { ok: false, error: 'Enter a delivery address.' };
+      return { ok: false, errorCode: 'deliveryAddressRequired' };
     }
   }
   const pointsToRedeem = input.loyaltyBlocksToRedeem * settings.loyaltyRedeemBlock;
   if (pointsToRedeem > user.loyaltyBalance) {
-    return { ok: false, error: 'Not enough loyalty points.' };
+    return { ok: false, errorCode: 'notEnoughLoyalty' };
   }
   return { ok: true };
 }
 
 export function applyPromoCode(
   code: string,
-  promos: PromoCode[]
-): { ok: boolean; error?: string; promoId?: string } {
+  promos: CheckoutInput['promos']
+): { ok: boolean; errorCode?: ErrorCode; promoId?: string } {
   const promo = promos.find(
     (p) => p.active && p.code.toUpperCase() === code.trim().toUpperCase()
   );
-  if (!promo) return { ok: false, error: 'Promo code not found.' };
+  if (!promo) return { ok: false, errorCode: 'promoNotFound' };
   if (promo.maxRedemptions != null && promo.redemptionCount >= promo.maxRedemptions) {
-    return { ok: false, error: 'Promo fully redeemed.' };
+    return { ok: false, errorCode: 'promoFullyRedeemed' };
   }
   return { ok: true, promoId: promo.id };
 }

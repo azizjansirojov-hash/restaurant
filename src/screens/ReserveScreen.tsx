@@ -1,18 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useStripePayment } from '../hooks/useStripePayment';
 import { Button } from '../components/Button';
 import { Chip } from '../components/Chip';
 import { useAppReservations, useAppSettings } from '../hooks/useAppData';
 import { useReservationActions } from '../hooks/useAppActions';
 import { createDepositHold, isStripeConfigured } from '../api/payments';
+import { resolveErrorCode } from '../domain/errorCodes';
 import { isSupabaseConfigured } from '../lib/env';
 import { colors, spacing } from '../theme/tokens';
-import { formatCents } from '../utils/money';
+import { formatSom } from '../utils/money';
 import { formatSlotLabel, generateSlots, isPeakSlot } from '../utils/reservations';
 
 export function ReserveScreen() {
+  const { t } = useTranslation();
   const { data: settings } = useAppSettings();
   const { data: reservations = [] } = useAppReservations();
   const { createReservation } = useReservationActions();
@@ -22,6 +25,8 @@ export function ReserveScreen() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [booking, setBooking] = useState(false);
+
+  const errLabel = (code: string) => t(`errors.${code}`, { defaultValue: t('errors.unknown') });
 
   const day = useMemo(() => {
     const d = new Date();
@@ -36,7 +41,7 @@ export function ReserveScreen() {
 
   const book = async () => {
     if (!settings || !selected) {
-      setError('Pick a time slot.');
+      setError(t('reservation.pickSlot'));
       return;
     }
     setBooking(true);
@@ -44,18 +49,18 @@ export function ReserveScreen() {
     try {
       const res = await createReservation(party, selected);
       if (!res.ok) {
-        setError(res.error || 'Could not book.');
+        setError(res.error ? errLabel(resolveErrorCode(res.error)) : t('errors.unknown'));
         return;
       }
 
       if (res.requiresDeposit && isSupabaseConfigured() && isStripeConfigured()) {
         const { clientSecret } = await createDepositHold(
           res.reservationId!,
-          settings.peakDepositCents
+          settings.peakDepositSom
         );
         const { error: initErr } = await initPaymentSheet({
           paymentIntentClientSecret: clientSecret,
-          merchantDisplayName: 'Lale',
+          merchantDisplayName: t('common.appName'),
         });
         if (initErr) {
           setError(initErr.message);
@@ -66,17 +71,19 @@ export function ReserveScreen() {
           setError(presentErr.message);
           return;
         }
-        setMessage(`Booked with ${formatCents(settings.peakDepositCents)} authorization hold.`);
+        setMessage(
+          t('reservation.bookedWithHold', { amount: formatSom(settings.peakDepositSom) })
+        );
       } else if (res.requiresDeposit) {
         setMessage(
-          `Booked — peak deposit of ${formatCents(settings.peakDepositCents)} required when Stripe is configured.`
+          t('reservation.bookedDepositRequired', { amount: formatSom(settings.peakDepositSom) })
         );
       } else {
-        setMessage('Table booked. We’ll remind you 2 hours before.');
+        setMessage(t('reservation.bookedReminder'));
       }
       setSelected(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not book.');
+      setError(e instanceof Error ? e.message : t('errors.unknown'));
     } finally {
       setBooking(false);
     }
@@ -87,11 +94,11 @@ export function ReserveScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.eyebrow}>Tonight</Text>
-        <Text style={styles.title}>Reserve</Text>
-        <Text style={styles.sub}>A table at Lale · party of {party}</Text>
+        <Text style={styles.eyebrow}>{t('reservation.eyebrow')}</Text>
+        <Text style={styles.title}>{t('reservation.title')}</Text>
+        <Text style={styles.sub}>{t('reservation.subtitle', { party })}</Text>
 
-        <Text style={styles.section}>Party size</Text>
+        <Text style={styles.section}>{t('reservation.partySize')}</Text>
         <View style={styles.row}>
           {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
             <Chip
@@ -104,20 +111,26 @@ export function ReserveScreen() {
           ))}
         </View>
 
-        <Text style={styles.section}>Time</Text>
+        <Text style={styles.section}>{t('reservation.time')}</Text>
         {slots.length === 0 ? (
-          <Text style={styles.empty}>No available slots today.</Text>
+          <Text style={styles.empty}>{t('reservation.emptySlots')}</Text>
         ) : (
           <View style={styles.row}>
             {slots.map(({ slotStart, remaining }) => {
               const disabled = remaining <= 0;
-              const peak = isPeakSlot(slotStart) && settings.peakDepositEnabled;
+              const peak = isPeakSlot(slotStart, settings.timezone) && settings.peakDepositEnabled;
               const on = selected?.getTime() === slotStart.getTime();
               return (
                 <Chip
                   key={slotStart.toISOString()}
-                  label={formatSlotLabel(slotStart)}
-                  meta={disabled ? 'Full' : peak ? 'Peak hold' : `${remaining} left`}
+                  label={formatSlotLabel(slotStart, settings.timezone)}
+                  meta={
+                    disabled
+                      ? t('common.full')
+                      : peak
+                        ? t('reservation.peakHold')
+                        : t('common.left', { count: remaining })
+                  }
                   selected={on}
                   disabled={disabled}
                   onPress={() => setSelected(slotStart)}
@@ -130,7 +143,7 @@ export function ReserveScreen() {
         {!!error && <Text style={styles.error}>{error}</Text>}
         {!!message && <Text style={styles.ok}>{message}</Text>}
         <Button
-          label={booking ? 'Booking…' : 'Confirm reservation'}
+          label={booking ? t('reservation.booking') : t('reservation.confirm')}
           onPress={book}
           loading={booking}
           disabled={slots.length === 0 || booking}
